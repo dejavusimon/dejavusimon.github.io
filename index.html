@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DEJAVUSIMON — Sisheng Su</title>
+  <meta name="description" content="Portfolio of Sisheng (Simon) Su — in progress.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400&family=Space+Grotesk:wght@700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body {
+      font-family: Inter, system-ui, sans-serif;
+      background: #fff; color: #111;
+      display: flex; align-items: center; justify-content: center;
+      text-align: center; padding: 24px;
+    }
+    .wordmark {
+      font-family: "Space Grotesk", sans-serif; font-weight: 700;
+      font-size: clamp(40px, 8vw, 88px); letter-spacing: 0.02em; line-height: 1;
+    }
+    .name { color: #999; font-size: clamp(16px, 2vw, 20px); margin-top: 12px; }
+    .status {
+      margin-top: 48px; display: inline-flex; align-items: center; gap: 10px;
+      font-size: 13px; letter-spacing: 0.12em; text-transform: uppercase; color: #555;
+    }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: #111; animation: pulse 2.4s ease-in-out infinite; }
+    @keyframes pulse { 50% { opacity: .2; } }
+  </style>
+</head>
+<body>
+  <main>
+    <h1 class="wordmark">DEJAVUSIMON</h1>
+    <p class="name">Sisheng Su</p>
+    <p class="status"><span class="dot"></span>Portfolio in progress</p>
+  </main>
+</body>
+</html>
