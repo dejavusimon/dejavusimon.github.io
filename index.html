@@ -15,26 +15,86 @@
       font-family: Inter, system-ui, sans-serif;
       background: #fff; color: #111;
       display: flex; align-items: center; justify-content: center;
-      text-align: center; padding: 24px;
+      text-align: center; overflow-x: hidden;
     }
+    main { width: 100%; }
     .wordmark {
       font-family: "Space Grotesk", sans-serif; font-weight: 700;
       font-size: clamp(40px, 8vw, 88px); letter-spacing: 0.02em; line-height: 1;
     }
-    .name { color: #999; font-size: clamp(16px, 2vw, 20px); margin-top: 12px; }
-    .status {
-      margin-top: 48px; display: inline-flex; align-items: center; gap: 10px;
-      font-size: 13px; letter-spacing: 0.12em; text-transform: uppercase; color: #555;
+    .name, .status {
+      font-size: 13px; letter-spacing: 0.12em;
+      text-transform: uppercase; color: #555;
     }
-    .dot { width: 8px; height: 8px; border-radius: 50%; background: #111; animation: pulse 2.4s ease-in-out infinite; }
-    @keyframes pulse { 50% { opacity: .2; } }
+    .name { margin-top: 18px; }
+    .logo {
+      position: fixed; top: 20px; left: 20px;
+      width: 34px; height: auto; display: block;
+    }
+    @media (max-width: 600px) { .logo { top: 12px; left: 12px; width: 26px; } }
+
+    /* Loading bar made of the logo, repeated edge to edge */
+    .loader {
+      --tile-h: 34px;   /* logo height */
+      --tile-w: 41px;   /* logo width, no gap: tiles join into one continuous band */
+      position: relative; width: 100%; height: var(--tile-h);
+      margin-top: 48px;
+    }
+    .loader .track, .loader .ink {
+      position: absolute; inset: 0;
+      background-repeat: repeat-x;
+      background-size: var(--tile-w) var(--tile-h);
+      animation: flow 1.6s linear infinite;   /* tiles stream right → left */
+    }
+    .loader .track { background-image: var(--outline); }
+    .loader .ink   { background-image: var(--solid); clip-path: inset(0 calc(100% - var(--p, 0%)) 0 0); }
+    @keyframes flow { to { background-position: calc(-1 * var(--tile-w)) 0; } }
+
+    .status { margin-top: 28px; }
+
+    @media (prefers-reduced-motion: reduce) { .loader .track, .loader .ink { animation: none; } }
   </style>
 </head>
 <body>
+  <a href="/"><img class="logo" src="assets/logo.png" alt="DEJAVUSIMON logo"></a>
   <main>
     <h1 class="wordmark">DEJAVUSIMON</h1>
     <p class="name">Sisheng Su</p>
-    <p class="status"><span class="dot"></span>Portfolio in progress</p>
+    <div class="loader" role="progressbar" aria-label="Portfolio in progress">
+      <div class="track"></div>
+      <div class="ink"></div>
+    </div>
+    <p class="status">Portfolio in progress</p>
   </main>
+
+  <script>
+    // Logo redrawn as vector: a wave band above a solid bar (700 × 560 units).
+    // Only the top and bottom edges are outlined (no side edges), so neighbouring
+    // tiles join into one continuous wave line and one continuous bar.
+    const W = "M0 47 C50 81 100 93 152 93 C262 93 404 0 545 0 C600 0 650 15 697 46";
+    const Wb = "M697 241 C650 210 600 195 545 195 C404 195 262 288 152 288 C100 288 50 276 0 242";
+    const shape = solid => `
+      <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 -8 697 573' preserveAspectRatio='none'>
+        <path d='${W} L${Wb.slice(1)} Z M0 340 H697 V557 H0 Z' fill='${solid ? "#111" : "#fff"}'/>
+        ${solid ? "" : `<g fill='none' stroke='#111' stroke-width='1.5' vector-effect='non-scaling-stroke'>
+          <path vector-effect='non-scaling-stroke' d='${W}'/>
+          <path vector-effect='non-scaling-stroke' d='${Wb}'/>
+          <path vector-effect='non-scaling-stroke' d='M0 340 H697 M0 557 H697'/>
+        </g>`}
+      </svg>`;
+    const uri = s => `url("data:image/svg+xml,${encodeURIComponent(s.replace(/\s+/g, " "))}")`;
+    const loader = document.querySelector(".loader");
+    loader.style.setProperty("--outline", uri(shape(false)));
+    loader.style.setProperty("--solid",   uri(shape(true)));
+
+    // Progress that keeps creeping forward but never reaches the end.
+    const start = performance.now();
+    (function tick(now) {
+      const t = (now - start) / 1000;
+      const p = 100 * (1 - 1 / (1 + t / 20));   // 50% at 20s, 75% at 1 min, 90% at 3 min… never 100%
+      loader.style.setProperty("--p", p.toFixed(3) + "%");
+      requestAnimationFrame(tick);
+    })(start);
+  </script>
 </body>
 </html>
