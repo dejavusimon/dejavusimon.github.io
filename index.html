@@ -24,27 +24,59 @@
       text-align: center; overflow-x: hidden;
     }
     main { width: 100%; }
-    .wordmark {
+    .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+    /* DEJAVU | name + email | SIMON — the words part evenly to reveal two lines */
+    .masthead {
       font-family: "Space Grotesk", sans-serif; font-weight: 700;
       font-size: clamp(40px, 8vw, 88px); letter-spacing: 0.02em; line-height: 1;
+      display: flex; justify-content: center; align-items: last baseline;  /* lines sit on the wordmark's baseline */
     }
-    .name, .status {
+    .contact {
+      width: 0; overflow: hidden; flex: none;
+      transition: width .7s cubic-bezier(.65, 0, .35, 1);
+    }
+    .contact-inner {
+      width: max-content;
+      display: flex; flex-direction: column; align-items: flex-start;   /* both lines share one left edge */
+      padding: 0 24px;                                                 /* equal gap to DEJAVU and SIMON */
+      font-family: Inter, system-ui, sans-serif; font-weight: 400;
+      font-size: 13px; line-height: 1.32; letter-spacing: 0.12em;
+      text-transform: uppercase; white-space: nowrap; color: #555;
+      text-align: left; opacity: 0; transition: opacity .35s ease;
+    }
+    .contact-inner a { display: inline-flex; align-items: center; gap: 0.7em; color: inherit; text-decoration: none; }
+    .contact-inner a:hover { text-decoration: underline; text-underline-offset: 3px; }
+    .open .contact-inner { opacity: 1; transition-delay: .3s; }
+    .status {
       font-size: 13px; letter-spacing: 0.12em;
       text-transform: uppercase; color: #555;
     }
-    .name { margin-top: 18px; }
-    .logo {
-      position: fixed; top: 20px; left: 20px;
-      width: 34px; height: auto; display: block;
+    .logo-btn {
+      position: fixed; top: 20px; left: 20px; z-index: 2;
+      background: none; border: 0; padding: 0; cursor: pointer; line-height: 0;
     }
-    @media (max-width: 600px) { .logo { top: 12px; left: 12px; width: 26px; } }
+    .logo-btn img { width: 34px; height: auto; display: block; }
+    .logo-btn:focus-visible { outline: 2px solid #111; outline-offset: 4px; }
+    /* small arrow at the logo's lower-right corner, nudging toward it */
+    .nudge {
+      position: absolute; left: calc(100% + 2px); top: calc(100% + 2px);
+      width: 13px; height: 13px; overflow: visible;
+      will-change: transform; backface-visibility: hidden;
+      animation: nudge 1.3s ease-in-out infinite;
+    }
+    @keyframes nudge { 0%, 100% { transform: translate3d(3px, 3px, 0); } 50% { transform: translate3d(0, 0, 0); } }
+    @media (max-width: 600px) {
+      .logo-btn { top: 12px; left: 12px; }
+      .logo-btn img { width: 26px; }
+    }
 
     /* Loading bar made of the logo, repeated edge to edge */
     .loader {
       --tile-h: 34px;   /* logo height */
       --tile-w: 41px;   /* logo width, no gap: tiles join into one continuous band */
       position: relative; width: 100%; height: var(--tile-h);
-      margin-top: 48px;
+      margin-top: 64px;
     }
     .loader .track, .loader .ink {
       position: absolute; inset: 0;
@@ -56,21 +88,54 @@
     .loader .ink   { background-image: var(--solid); clip-path: inset(0 calc(100% - var(--p, 0%)) 0 0); }
     @keyframes flow { to { background-position: calc(-1 * var(--tile-w)) 0; } }
 
-    .status { margin-top: 28px; }
+    .status { margin-top: 68px; display: inline-flex; align-items: center; gap: 9px; }
+    .gear { width: 14px; height: 14px; animation: spin 5s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
 
-    @media (prefers-reduced-motion: reduce) { .loader .track, .loader .ink { animation: none; } }
+    /* Phones: not enough width between the words, so contact drops below them */
+    @media (max-width: 640px) {
+      .masthead { flex-wrap: wrap; }
+      .contact { order: 3; flex-basis: 100%; width: auto !important; height: 0; transition: height .6s cubic-bezier(.65, 0, .35, 1); }
+      .contact-inner { width: auto; align-items: center; padding: 14px 0 0; }
+      .w { transition: transform .6s cubic-bezier(.65, 0, .35, 1); }
+      .open .w-left { transform: translateX(-0.12em); }
+      .open .w-right { transform: translateX(0.12em); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .loader .track, .loader .ink, .nudge, .gear { animation: none; }
+      .contact, .contact-inner, .w { transition: none !important; }
+    }
   </style>
 </head>
 <body>
-  <a href="/"><img class="logo" src="assets/logo.png" alt="DEJAVUSIMON logo"></a>
+  <button class="logo-btn" type="button" aria-expanded="false" aria-controls="contact" aria-label="Show contact info">
+    <img src="assets/logo.png" alt="">
+    <svg class="nudge" viewBox="0 0 24 24" aria-hidden="true" shape-rendering="geometricPrecision">
+      <path d="M6.76 24.00 L0.00 24.00 L0.00 0.00 L24.00 0.00 L24.00 6.76 L6.80 6.80Z" fill="#111"/>
+    </svg>
+  </button>
   <main>
-    <h1 class="wordmark">DEJAVUSIMON</h1>
-    <p class="name">Sisheng Su</p>
+    <h1 class="sr-only">DEJAVUSIMON</h1>
+    <div class="masthead" aria-hidden="false">
+      <span class="w w-left" aria-hidden="true">DEJAVU</span>
+      <div class="contact" id="contact" aria-hidden="true">
+        <div class="contact-inner">
+          <span class="name">Sisheng Su</span>
+          <a href="mailto:dejavus.work@gmail.com" tabindex="-1">
+            dejavus.work@gmail.com</a>
+        </div>
+      </div>
+      <span class="w w-right" aria-hidden="true">SIMON</span>
+    </div>
     <div class="loader" role="progressbar" aria-label="Portfolio under maintenance">
       <div class="track"></div>
       <div class="ink"></div>
     </div>
-    <p class="status">Portfolio under maintenance</p>
+    <p class="status">
+      <svg class="gear" viewBox="-12 -12 24 24" aria-hidden="true"><g fill="#555"><rect x="-1.6" y="-11" width="3.2" height="4.5" rx="0.6" transform="rotate(0)"/><rect x="-1.6" y="-11" width="3.2" height="4.5" rx="0.6" transform="rotate(45)"/><rect x="-1.6" y="-11" width="3.2" height="4.5" rx="0.6" transform="rotate(90)"/><rect x="-1.6" y="-11" width="3.2" height="4.5" rx="0.6" transform="rotate(135)"/><rect x="-1.6" y="-11" width="3.2" height="4.5" rx="0.6" transform="rotate(180)"/><rect x="-1.6" y="-11" width="3.2" height="4.5" rx="0.6" transform="rotate(225)"/><rect x="-1.6" y="-11" width="3.2" height="4.5" rx="0.6" transform="rotate(270)"/><rect x="-1.6" y="-11" width="3.2" height="4.5" rx="0.6" transform="rotate(315)"/><circle r="7.5"/></g><circle r="2.8" fill="#fff"/></svg>
+      Portfolio under maintenance
+    </p>
   </main>
 
   <script>
@@ -92,6 +157,32 @@
     const loader = document.querySelector(".loader");
     loader.style.setProperty("--outline", uri(shape(false)));
     loader.style.setProperty("--solid",   uri(shape(true)));
+
+    // Logo toggles the contact info (no page reload).
+    const btn = document.querySelector(".logo-btn");
+    const masthead = document.querySelector(".masthead");
+    const contact = document.getElementById("contact");
+    const inner = contact.querySelector(".contact-inner");
+    const phone = matchMedia("(max-width: 640px)");
+    function setOpen(open) {
+      masthead.classList.toggle("open", open);
+      btn.setAttribute("aria-expanded", open);
+      btn.setAttribute("aria-label", open ? "Hide contact info" : "Show contact info");
+      contact.setAttribute("aria-hidden", !open);
+      inner.querySelectorAll("a").forEach(a => a.tabIndex = open ? 0 : -1);
+      if (phone.matches) { contact.style.height = open ? inner.scrollHeight + "px" : "0px"; contact.style.width = ""; }
+      else { contact.style.width = open ? inner.offsetWidth + "px" : "0px"; contact.style.height = ""; }
+    }
+    btn.addEventListener("click", () => setOpen(!masthead.classList.contains("open")));
+    document.addEventListener("keydown", e => { if (e.key === "Escape") setOpen(false); });
+    const refit = () => {
+      contact.style.transition = "none";
+      setOpen(masthead.classList.contains("open")); contact.offsetWidth;
+      contact.style.transition = "";
+    };
+    refit();
+    addEventListener("resize", refit);
+    document.fonts && document.fonts.ready.then(refit);
 
     // Progress that keeps creeping forward but never reaches the end.
     const start = performance.now();
