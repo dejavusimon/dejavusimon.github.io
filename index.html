@@ -31,7 +31,9 @@
       font-family: "Space Grotesk", sans-serif; font-weight: 700;
       font-size: clamp(40px, 8vw, 88px); letter-spacing: 0.02em; line-height: 1;
       display: flex; justify-content: center; align-items: last baseline;  /* lines sit on the wordmark's baseline */
+      height: 1em; flex-wrap: wrap; align-content: flex-end;               /* row height fixed so the bar below never jumps */
     }
+    .w { font-size: calc(1em * var(--wscale, 1)); transition: font-size .7s cubic-bezier(.65, 0, .35, 1); }
     .contact {
       width: 0; overflow: hidden; flex: none;
       transition: width .7s cubic-bezier(.65, 0, .35, 1);
@@ -92,14 +94,9 @@
     .gear { width: 14px; height: 14px; animation: spin 5s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    /* Phones: not enough width between the words, so contact drops below them */
+    /* Phones: same parting animation, smaller name/email so everything fits on one row */
     @media (max-width: 640px) {
-      .masthead { flex-wrap: wrap; }
-      .contact { order: 3; flex-basis: 100%; width: auto !important; height: 0; transition: height .6s cubic-bezier(.65, 0, .35, 1); }
-      .contact-inner { width: auto; align-items: center; padding: 14px 0 0; }
-      .w { transition: transform .6s cubic-bezier(.65, 0, .35, 1); }
-      .open .w-left { transform: translateX(-0.12em); }
-      .open .w-right { transform: translateX(0.12em); }
+      .contact-inner { font-size: 8.5px; letter-spacing: 0.08em; padding: 0 10px; }
     }
 
     @media (prefers-reduced-motion: reduce) {
@@ -163,22 +160,30 @@
     const masthead = document.querySelector(".masthead");
     const contact = document.getElementById("contact");
     const inner = contact.querySelector(".contact-inner");
-    const phone = matchMedia("(max-width: 640px)");
+    const words = [...masthead.querySelectorAll(".w")];
     function setOpen(open) {
       masthead.classList.toggle("open", open);
       btn.setAttribute("aria-expanded", open);
       btn.setAttribute("aria-label", open ? "Hide contact info" : "Show contact info");
       contact.setAttribute("aria-hidden", !open);
       inner.querySelectorAll("a").forEach(a => a.tabIndex = open ? 0 : -1);
-      if (phone.matches) { contact.style.height = open ? inner.scrollHeight + "px" : "0px"; contact.style.width = ""; }
-      else { contact.style.width = open ? inner.offsetWidth + "px" : "0px"; contact.style.height = ""; }
+      const cw = inner.offsetWidth;
+      contact.style.width = open ? cw + "px" : "0px";
+      // If DEJAVU + lines + SIMON won't fit the screen, shrink the two words just enough
+      let scale = 1;
+      if (open) {
+        const wordsW = words.reduce((t, w) => t + w.scrollWidth / (parseFloat(getComputedStyle(masthead).getPropertyValue("--wscale")) || 1), 0);
+        const avail = masthead.clientWidth - 24;
+        if (wordsW + cw > avail) scale = Math.max(0.5, (avail - cw) / wordsW);
+      }
+      masthead.style.setProperty("--wscale", scale.toFixed(3));
     }
     btn.addEventListener("click", () => setOpen(!masthead.classList.contains("open")));
     document.addEventListener("keydown", e => { if (e.key === "Escape") setOpen(false); });
     const refit = () => {
-      contact.style.transition = "none";
+      const els = [contact, ...words]; els.forEach(e => e.style.transition = "none");
       setOpen(masthead.classList.contains("open")); contact.offsetWidth;
-      contact.style.transition = "";
+      els.forEach(e => e.style.transition = "");
     };
     refit();
     addEventListener("resize", refit);
