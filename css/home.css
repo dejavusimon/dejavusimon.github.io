@@ -34,6 +34,7 @@ body.is-home .card { background: var(--surface); }
 body.is-docked .hero-name { visibility: visible; }
 .name-clip { display: block; overflow: hidden; }
 .hero-name .t-name { display: block; white-space: nowrap; transform-origin: 0 0; }
+.is-flying .card--hero, .is-flying .name-clip { overflow: visible; }
 .name-mark { position: absolute; left: 0; top: 0; color: var(--ink); opacity: 0; pointer-events: none; }
 
 /* ---- Work grid: 12 equal cards; the hovered one grows to 2 × 2 and the rest reflow ---- */

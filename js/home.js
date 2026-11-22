@@ -66,21 +66,21 @@
 
   // ---------- 1. dock after the zipper ----------
   function dock() {
-    body.classList.add("is-home");
+    // One element only: the name that lives in the card. It starts exactly over the big
+    // centred name, scaled up, and settles to its own size, so nothing is swapped mid-flight.
     const stage = document.querySelector(".name-stage");
     const first = stageName.getBoundingClientRect();
-    const last = name.getBoundingClientRect();          // where it will rest (hidden until it lands)
-    const done = () => { body.classList.add("is-docked"); stage.remove(); };
-    if (reduce) return done();
-    // fly the big centred name onto its resting place, above the cards so nothing clips it
-    stage.style.zIndex = 60;
-    stageName.style.transformOrigin = "0 0";
-    const s = last.width / first.width;
-    stageName.animate(
-      [{ transform: "none" },
-       { transform: `translate(${last.left - first.left}px, ${last.top - first.top}px) scale(${s})` }],
-      { duration: 1100, easing: "cubic-bezier(.65, 0, .35, 1)", fill: "forwards" }
-    ).finished.then(done);
+    body.classList.add("is-home", "is-docked", "is-flying");   // card stops clipping while it moves
+    stage.remove();
+    collapse();
+    const last = name.getBoundingClientRect();
+    if (reduce) return body.classList.remove("is-flying");
+    const s = first.width / last.width;
+    name.animate(
+      [{ transform: `translate(${first.left - last.left}px, ${first.top - last.top}px) scale(${s})` },
+       { transform: "translate(0px, 0px) scale(1)" }],
+      { duration: 1100, easing: "cubic-bezier(.65, 0, .35, 1)" }
+    ).finished.then(() => body.classList.remove("is-flying"));
   }
 
   // ---------- 3. grid ----------
