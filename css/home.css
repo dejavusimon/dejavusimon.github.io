@@ -355,3 +355,6 @@ body.is-revealing .rv-in { opacity: 1; transform: none;
 }
 .toast.show { opacity: 1; transform: translate(-50%, 0); }
 .toast svg { width: 16px; height: 16px; color: #7ed957; flex: none; }
+/* phones: the work card in the middle of the screen shows its colour render */
+.work-card.is-lit .cover-marker { opacity: 1; }
+.work-card.is-lit .cover-sketch { opacity: 0; }

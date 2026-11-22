@@ -254,7 +254,7 @@
        { transform: "translate(0px, 0px) scale(1)" }],
       { duration: 800, delay: 400, easing: "cubic-bezier(.65, 0, .35, 1)", fill: "backwards" }
     ).finished.then(() => body.classList.remove("is-flying"));
-    shown.then(() => { body.classList.remove("is-revealing"); unlockWhenStill(); });
+    shown.then(() => { body.classList.remove("is-revealing"); unlockWhenStill(); queueLit(); });
   }
 
   // ---------- 3. grid ----------
@@ -364,6 +364,37 @@
   // decode every cover image up front so the first hover never waits on (or flashes) an image
   grid.querySelectorAll(".work-cover img, .frame-photo").forEach(img => { img.loading = "eager"; img.decode?.().catch(() => {}); });
 
+  // ---------- 3a. Phones: the card in the middle of the screen turns to colour ----------
+  // One card at most, the one whose centre is nearest the screen's centre (and within the
+  // middle band). A new card only takes over once it is clearly nearer, so two cards near the
+  // middle can't keep swapping.
+  let lit = null, litQueued = false;
+  const narrow = matchMedia("(max-width: 720px)");
+  function updateLit() {
+    litQueued = false;
+    let best = null, bestD = Infinity;
+    if (narrow.matches && !framesMode() && body.classList.contains("is-home") && !body.classList.contains("is-revealing")) {
+      // the "middle" slides up near the top of the page and down near the bottom, so the first
+      // and last works (which can never reach the true centre) still get their turn
+      const H = innerHeight, band = H * 0.3, rest = document.documentElement.scrollHeight - (scrollY + H);
+      const mid = H * (scrollY < band ? lerp(0.34, 0.5, scrollY / band) : rest < band ? lerp(0.7, 0.5, rest / band) : 0.5);
+      for (const el of cards) {
+        const f = el.querySelector(".face--front"); if (!f.querySelector(`.panel--${f.dataset.show} .work-cover`)) continue;
+        const r = el.getBoundingClientRect(), d = Math.abs(r.top + r.height / 2 - mid);
+        if (d < bestD) { bestD = d; best = el; }
+      }
+      if (bestD > innerHeight * 0.22) best = null;                  // nothing in the middle band
+      if (lit && best && best !== lit) {
+        const r = lit.getBoundingClientRect(), d = Math.abs(r.top + r.height / 2 - mid);
+        if (d < innerHeight * 0.22 && d - bestD < 48) best = lit;    // hold until clearly beaten
+      }
+    }
+    if (best !== lit) { lit?.classList.remove("is-lit"); best?.classList.add("is-lit"); lit = best; }
+  }
+  const queueLit = () => { if (!litQueued) { litQueued = true; requestAnimationFrame(updateLit); } };
+  addEventListener("scroll", queueLit, { passive: true });
+  addEventListener("resize", queueLit);
+
   // ---------- 3b. Frames: turn a photo over to see where it was taken ----------
   cards.forEach(el => { if (el.dataset.c1) el.style.setProperty("--tint", el.dataset.c1); });
   const persp = "perspective(1100px) ";
@@ -455,6 +486,7 @@
     });
     setPageMode(next);
     resetMaps();
+    setTimeout(queueLit, 900);
     if (next === 2) active = -1;                                     // collapse any open card entering Frames
     layoutGrid(true);
     const label = `Showing ${MODES[next].word.toLowerCase()}. Flip to show ${MODES[(next + 1) % 3].word.toLowerCase()}`;
