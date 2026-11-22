@@ -10,26 +10,37 @@
   <link rel="icon" type="image/png" sizes="16x16" href="/assets/icons/favicon-16.png">
   <link rel="apple-touch-icon" href="/assets/icons/apple-touch-icon.png">
   <link rel="manifest" href="/site.webmanifest">
-  <meta name="theme-color" content="#111111">
+  <meta name="theme-color" content="#ebebeb">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&family=Space+Grotesk:wght@700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/tokens.css">
   <link rel="stylesheet" href="css/base.css">
   <link rel="stylesheet" href="css/intro.css">
-  <style>
-    /* Temporary home behind the zipper, until the real home page is designed */
-    .home { min-height: 100vh; display: grid; place-items: center; text-align: center; }
-    .home .t-label { margin-top: var(--space-4); }
-  </style>
+  <link rel="stylesheet" href="css/home.css">
 </head>
 <body>
-  <main class="home">
-    <div>
-      <h1 class="t-display">DEJAVUSIMON</h1>
-      <p class="t-label">Sisheng Su</p>
-    </div>
+  <!-- the name sits centred under the zipper, then docks into the top card -->
+  <div class="name-stage" aria-hidden="true"><span class="t-display">DEJAVUSIMON</span></div>
+
+  <main class="board">
+    <h1 class="sr-only">DEJAVUSIMON — Sisheng Su</h1>
+
+    <section class="card card--hero" aria-label="Introduction">
+      <div class="hero-name"></div>
+      <nav class="hero-nav" aria-label="Site"></nav>
+      <div class="hero-intro"></div>
+      <div class="hero-meta"></div>
+    </section>
+
+    <section class="work-grid" aria-label="Work">
+      <article class="card card--tall"><div class="card-meta"></div></article>
+      <article class="card"><div class="card-meta"></div></article>
+      <article class="card"><div class="card-meta"></div></article>
+    </section>
   </main>
+
   <script src="js/intro.js"></script>
+  <script src="js/home.js"></script>
 </body>
 </html>

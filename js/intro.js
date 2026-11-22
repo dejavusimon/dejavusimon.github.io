@@ -5,7 +5,7 @@
 (() => {
   const NS = "http://www.w3.org/2000/svg";
   const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
-  const INK = css("--ink") || "#111", PULL = css("--zip-pull") || "#fff", RAIL = css("--zip-rail") || "#6e6e6e";
+  const COVER = css("--zip-cover") || css("--paper") || "#fefefe", ZIP = css("--zip") || "#1b1b1b";
 
   // Logo turned vertical, in its own units (557 wide x 697 tall): wave on the left, bar on the right
   const LW = 557, LH = 697, WAVE = [46, 242], BAR = [340, 557];
@@ -22,12 +22,12 @@
         <path class="m-hole" fill="#000"/>
       </mask>
     </defs>
-    <rect class="cover" x="0" y="0" fill="${INK}" mask="url(#zipMask)"/>
-    <path class="rail rail-l" fill="none" stroke="${RAIL}"/>
-    <path class="rail rail-r" fill="none" stroke="${RAIL}"/>
+    <rect class="cover" x="0" y="0" fill="${COVER}" mask="url(#zipMask)"/>
+    <path class="rail rail-l" fill="none" stroke="${ZIP}"/>
+    <path class="rail rail-r" fill="none" stroke="${ZIP}"/>
     <g class="pull">
       <rect class="hit" fill="transparent"/>
-      <g class="logo" fill="${PULL}">${LOGO}</g>
+      <g class="logo" fill="${ZIP}">${LOGO}</g>
     </g>`;
   document.body.prepend(svg);
   document.body.classList.add("intro-active");
@@ -107,7 +107,10 @@
   function release() { if (target > 0.7) target = 1; }
   function finish() {
     finishing = true;
-    setTimeout(() => svg.classList.add("is-done"), 350);
+    setTimeout(() => {
+      svg.classList.add("is-done");
+      document.dispatchEvent(new CustomEvent("intro:done"));   // page takes over (name docks, cards appear)
+    }, 350);
     setTimeout(() => { svg.remove(); document.body.classList.remove("intro-active"); }, 1100);
   }
 
