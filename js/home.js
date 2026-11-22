@@ -166,8 +166,11 @@
     slots.forEach(({ i, x, y, w, h }) => {
       const el = cards[i]; if (!el.dataset.c1) return;
       const [b1, b2] = poolBlobs[i];
-      b1.style.transform = `translate(${x - w * .15}px, ${y - h * .1}px)`; b1.style.width = w * 1.1 + "px"; b1.style.height = h * .8 + "px";
-      b2.style.transform = `translate(${x + w * .05}px, ${y + h * .35}px)`; b2.style.width = w * 1.1 + "px"; b2.style.height = h * .8 + "px";
+      const bw = w * 2.6, bh = h * 1.6;                            // each blob spills well past its card
+      const place = (b, cx, cy) => { b.style.width = bw + "px"; b.style.height = bh + "px";
+                                     b.style.transform = `translate(${cx - bw / 2}px, ${cy - bh / 2}px)`; };
+      place(b1, x + w * .5, y + h * .15);                         // main tone, upper half
+      place(b2, x + w * .5, y + h * .8);                          // second tone, lower half
     });
     if (!animate) requestAnimationFrame(() => grid.classList.remove("no-anim"));
   }
@@ -182,8 +185,9 @@
     const hit = slots.find(s => x >= s.x && x <= s.x + s.w && y >= s.y && y <= s.y + s.h);
     return hit ? hit.i : null;                                       // null = in a gap between cards
   }
+  const framesMode = () => body.classList.contains("is-frames");   // photos don't expand on hover
   grid.addEventListener("pointermove", e => {
-    if (e.pointerType !== "mouse") return;
+    if (e.pointerType !== "mouse" || framesMode()) return;
     const i = cardAt(e);
     if (i !== null) setActive(i);
   });
@@ -191,7 +195,7 @@
   let lastType = "mouse";
   grid.addEventListener("pointerdown", e => { lastType = e.pointerType; });
   grid.addEventListener("click", e => {                              // touch: tap to open / close
-    if (lastType === "mouse") return;
+    if (lastType === "mouse" || framesMode()) return;
     const i = cardAt(e); if (i !== null) setActive(active === i ? -1 : i);
   });
 
@@ -245,6 +249,7 @@
       inner.style.transform = `rotateX(${-180 * flips}deg)`;
     });
     setPageMode(next);
+    if (next === 2) active = -1;                                     // collapse any open card entering Frames
     layoutGrid(true);
     const label = `Showing ${MODES[next].word.toLowerCase()}. Flip to show ${MODES[(next + 1) % 3].word.toLowerCase()}`;
     const done = () => { mode = next; renderFlap(mode); flipping = false; flap.setAttribute("aria-label", label); };

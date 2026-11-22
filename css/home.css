@@ -2,7 +2,8 @@
 
 :root { --board-pad: clamp(16px, 3vw, 40px); }
 
-body { transition: background-color var(--dur-slow) var(--ease-in-out); overflow-x: hidden; }
+html, body { overflow-x: clip; }
+body { transition: background-color var(--dur-slow) var(--ease-in-out); }
 body.is-home { background: var(--canvas); }
 body.is-home.is-frames { background: #2e2b28; }  /* area-weighted average of all photos, darkened */
 
@@ -120,9 +121,9 @@ body.is-home .panel--frames:not(.is-empty) { background: transparent; }
 /* The colour pool: each photo's own main colours sit behind its card and bleed into the gaps,
    blending with the neighbours. It moves with the cards as they reflow. */
 .grid-pool { position: absolute; inset: 0; z-index: -1; pointer-events: none; opacity: 0;
-             filter: blur(60px) saturate(1.1); transition: opacity 1s var(--ease-in-out); }
+             filter: blur(120px) saturate(1.75) brightness(1.08); transition: opacity 1s var(--ease-in-out); }
 .is-frames .grid-pool { opacity: 1; }
-.grid-pool i { position: absolute; left: 0; top: 0; border-radius: 50%;
+.grid-pool i { position: absolute; left: 0; top: 0; border-radius: 50%; opacity: 1;
                transition: transform .55s var(--ease-in-out), width .55s var(--ease-in-out), height .55s var(--ease-in-out); }
 .work-grid { isolation: isolate; }
 .work-card.is-open { z-index: 1; }
