@@ -21,6 +21,12 @@
 
   const bar = document.querySelector(".topbar-inner");
   let m = {};   // measurements
+  function flapWidth() {
+    const g = document.querySelector(".work-grid");
+    const gap = parseFloat(getComputedStyle(root).getPropertyValue("--card-gap")) || 12;
+    const W = g.clientWidth;
+    return W >= 720 ? (W - gap * 2) / 3 : (W - gap) * 0.4;   // = one work card on desktop
+  }
   function cardHeight() {
     const g = document.querySelector(".work-grid");
     const gap = parseFloat(getComputedStyle(root).getPropertyValue("--card-gap")) || 12;
@@ -47,6 +53,7 @@
       fullW: clip.scrollWidth,
       dW: D.actualBoundingBoxRight - bearing + 1,                   // just the D
       h0: cardHeight(),                                        // title row = one work card tall
+      flapW: flapWidth(),
       sMin: 0.72,
     };
     m.hMin = Math.round(pad * 2 + cap * m.sMin);
@@ -63,6 +70,8 @@
   // slim logo bar, under 50% back to the full card. Nothing rests half-collapsed.
   function apply(c) {
     bar.style.setProperty("--hero-h", lerp(m.h0, m.hMin, c) + "px");
+    bar.style.setProperty("--flap-w", lerp(m.flapW, m.flapW / 2, ease(c)) + "px");
+    bar.style.setProperty("--c", c.toFixed(3));
     const a = ease(clamp(c / 0.75));                 // shorten + shrink
     const b = ease(clamp((c - 0.7) / 0.3));          // D → mark
     clip.style.width = lerp(m.fullW, m.dW, a) + "px";
@@ -186,7 +195,7 @@
     { key: "digital", word: "Interfaces", icon: ICON.cursor },
   ];
   const flap = document.querySelector(".flap");
-  const face = mo => `<span class="flap-content"><span class="flap-word">${mo.icon}${mo.word}</span></span>`;
+  const face = mo => `<span class="flap-content"><span class="flap-word">${mo.icon}<span class="flap-label">${mo.word}</span></span></span>`;
   let mode = 0, flipping = false;
   function renderFlap(cur, next = cur) {
     flap.innerHTML = `

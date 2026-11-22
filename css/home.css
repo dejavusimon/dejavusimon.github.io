@@ -19,10 +19,9 @@ body.is-home .topbar { background: var(--canvas); }
 /* Title card spans two columns; the flip toggle is a card in the third, lined up with the grid below */
 .topbar-inner {
   max-width: calc(var(--page-max) - 2 * var(--page-gutter)); margin: 0 auto;
-  display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--card-gap);
+  display: grid; grid-template-columns: 1fr var(--flap-w, calc((100% - 2 * var(--card-gap)) / 3)); gap: var(--card-gap);
   height: var(--hero-h, 294px);
 }
-.topbar-inner > .card--hero { grid-column: span 2; }
 
 .card { background: transparent; border-radius: var(--radius-card); transition: background-color var(--dur-base) ease; }
 body.is-home .card { background: var(--surface); }
@@ -40,7 +39,9 @@ body, .card, .topbar { transition: background-color var(--dur-slow) var(--ease-i
   position: relative; width: 100%; height: 100%; padding: 0; border: 0; cursor: pointer;
   background: none; perspective: 900px; border-radius: var(--radius-card); color: var(--surface);
   container-type: size;
+  opacity: 0; transition: opacity var(--dur-base) ease;   /* hidden behind the zipper until the page appears */
 }
+body.is-home .flap { opacity: 1; }
 .flap:focus-visible { outline: 2px solid var(--ink); outline-offset: 4px; }
 .flap-half {
   position: absolute; left: 0; right: 0; height: 50%; overflow: hidden;
@@ -56,7 +57,10 @@ body, .card, .topbar { transition: background-color var(--dur-slow) var(--ease-i
   display: flex; align-items: center; gap: .3em; white-space: nowrap;
   font: 700 clamp(16px, min(17cqh, 10.5cqw), 56px)/1 var(--font-display); letter-spacing: .01em;
 }
-.flap-word svg { width: .8em; height: .8em; flex: none; }
+.flap-word { gap: calc(.3em * (1 - var(--c, 0))); }
+.flap-word svg { width: calc(.8em + 10px * var(--c, 0)); height: calc(.8em + 10px * var(--c, 0)); flex: none; }
+/* collapsed bar: the word folds away and only the icon stays */
+.flap-label { display: inline-block; overflow: hidden; max-width: calc(8em * (1 - var(--c, 0))); opacity: calc(1 - 2 * var(--c, 0)); }
 .flap-leaf { position: absolute; left: 0; right: 0; top: 0; height: 50%; transform-origin: 50% 100%; transform-style: preserve-3d; z-index: 2; }
 .flap-leaf .flap-half { height: 100%; }
 .flap-leaf .leaf-back { transform: rotateX(180deg); border-radius: 0 0 var(--radius-card) var(--radius-card); }
@@ -114,8 +118,6 @@ body.is-home .work-cover { opacity: 1; }
 .card-meta { position: relative; display: flex; justify-content: space-between; font-size: var(--size-micro); color: var(--grey-500); }
 
 @media (max-width: 720px) {
-  .topbar-inner { grid-template-columns: 3fr 2fr; }
-  .topbar-inner > .card--hero { grid-column: auto; }
   .card--hero { grid-template-columns: 1fr; grid-template-rows: auto 1fr auto auto;
                 grid-template-areas: "name" "." "intro" "meta"; }
   .hero-nav { display: none; }   /* nav moves elsewhere on phones once it has links */
