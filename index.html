@@ -103,6 +103,22 @@
       .loader .track, .loader .ink, .nudge, .gear { animation: none; }
       .contact, .contact-inner, .w { transition: none !important; }
     }
+
+    /* ---- hidden entrance: 5 quick clicks on the gear → PIN pad ---- */
+    .gear { cursor: default; padding: 6px; margin: -6px; box-sizing: content-box; }
+    .pin { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center;
+           background: rgba(254,254,254,.82); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+           opacity: 0; pointer-events: none; transition: opacity .3s ease; }
+    .pin.open { opacity: 1; pointer-events: auto; }
+    .pin form { display: grid; justify-items: center; gap: 18px; }
+    .pin-label { font-size: 13px; letter-spacing: .12em; text-transform: uppercase; color: #555; }
+    .pin-boxes { display: flex; gap: 12px; }
+    .pin-boxes span { width: 46px; height: 56px; border: 2px solid #1b1b1b; border-radius: 10px; display: grid; place-items: center; }
+    .pin-boxes span.on::after { content: ""; width: 12px; height: 12px; border-radius: 50%; background: #1b1b1b; }
+    .pin input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+    .pin.busy .pin-boxes span { border-color: #8a8a8a; }
+    .pin.wrong .pin-boxes { animation: shake .4s; }
+    @keyframes shake { 20%, 60% { transform: translateX(-8px); } 40%, 80% { transform: translateX(8px); } }
   </style>
 </head>
 <body>
@@ -197,6 +213,56 @@
       loader.style.setProperty("--p", p.toFixed(3) + "%");
       requestAnimationFrame(tick);
     })(start);
+  </script>
+
+  <div class="pin" aria-hidden="true">
+    <form autocomplete="off">
+      <span class="pin-label">Enter PIN</span>
+      <div class="pin-boxes"><span></span><span></span><span></span><span></span></div>
+      <input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" aria-label="PIN">
+    </form>
+  </div>
+
+  <script>
+    // Hidden entrance. The new site is stored encrypted in vault.bin; the PIN is never in this
+    // page. It is the key: PBKDF2 (600k rounds) turns it into an AES-256 key, and only the right
+    // PIN decrypts the file. A wrong PIN simply fails to decrypt.
+    (() => {
+      const gear = document.querySelector(".gear"), pin = document.querySelector(".pin");
+      const form = pin.querySelector("form"), input = pin.querySelector("input"), boxes = pin.querySelectorAll(".pin-boxes span");
+      let clicks = 0, timer, vault;
+      gear.addEventListener("click", () => {
+        clearTimeout(timer); clicks++;
+        if (clicks >= 5) { clicks = 0; open(); return; }
+        timer = setTimeout(() => clicks = 0, 1200);          // clicks must come in quick succession
+      });
+      const getVault = () => vault ||= (window.__VAULT
+        ? Promise.resolve(Uint8Array.from(atob(window.__VAULT), c => c.charCodeAt(0)).buffer)
+        : fetch("vault.bin", { cache: "no-store" }).then(r => r.arrayBuffer()));
+      function open() { pin.classList.add("open"); pin.setAttribute("aria-hidden", "false"); input.value = ""; paint(); input.focus(); getVault(); }
+      function close() { pin.classList.remove("open"); pin.setAttribute("aria-hidden", "true"); input.blur(); }
+      const paint = () => boxes.forEach((b, i) => b.classList.toggle("on", i < input.value.length));
+      pin.addEventListener("click", e => { if (e.target === pin) close(); else input.focus(); });
+      addEventListener("keydown", e => { if (e.key === "Escape") close(); });
+      input.addEventListener("input", () => { input.value = input.value.replace(/\D/g, "").slice(0, 4); paint(); if (input.value.length === 4) unlock(input.value); });
+      form.addEventListener("submit", e => e.preventDefault());
+      async function unlock(code) {
+        pin.classList.add("busy");
+        try {
+          const u = new Uint8Array(await getVault());
+          const salt = u.slice(5, 21), iv = u.slice(21, 33), data = u.slice(33);
+          const base = await crypto.subtle.importKey("raw", new TextEncoder().encode(code), "PBKDF2", false, ["deriveKey"]);
+          const key = await crypto.subtle.deriveKey({ name: "PBKDF2", salt, iterations: 600000, hash: "SHA-256" },
+                                                    base, { name: "AES-GCM", length: 256 }, false, ["decrypt"]);
+          const zipped = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, data);
+          const html = await new Response(new Blob([zipped]).stream().pipeThrough(new DecompressionStream("gzip"))).text();
+          document.open(); document.write(html); document.close();
+        } catch {
+          pin.classList.remove("busy"); pin.classList.add("wrong");
+          setTimeout(() => { pin.classList.remove("wrong"); input.value = ""; paint(); }, 450);
+        }
+      }
+    })();
   </script>
 </body>
 </html>
