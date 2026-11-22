@@ -120,6 +120,28 @@
   // card rises from the backdrop under it, then the toggle card, then the work cards in waves
   // spreading out from the title card toward the bottom of the page.
   if ("scrollRestoration" in history) history.scrollRestoration = "manual";
+  // Scroll lock: the wheel/swipe that unzips the zipper must not carry on into the page.
+  // The page can't scroll while the zipper or the reveal is running, and stays locked after
+  // that until the wheel has been still for a moment (trackpad momentum keeps firing for ~1 s).
+  let lastWheel = 0;
+  const locked = () => body.classList.contains("intro-active") || body.classList.contains("is-revealing")
+                       || performance.now() - lastWheel < 250 && body.dataset.wheelLock === "1";
+  const blockScroll = e => {
+    if (body.dataset.wheelLock !== "1" && !body.classList.contains("intro-active") && !body.classList.contains("is-revealing")) return;
+    if (e.type === "wheel") lastWheel = performance.now();
+    if (locked()) { e.preventDefault(); if (scrollY) scrollTo(0, 0); }
+    else delete body.dataset.wheelLock;                               // input has gone quiet: unlock for good
+  };
+  if (document.querySelector(".intro")) body.dataset.wheelLock = "1";
+  addEventListener("wheel", blockScroll, { passive: false });
+  addEventListener("touchmove", blockScroll, { passive: false });
+  addEventListener("keydown", e => { if (["ArrowDown","ArrowUp","PageDown","PageUp"," ","End","Home"].includes(e.key)) blockScroll(e); });
+  addEventListener("scroll", () => { if (body.dataset.wheelLock === "1" && scrollY) scrollTo(0, 0); });
+  function unlockWhenStill() {                                      // after the reveal: wait out any momentum
+    const t = setInterval(() => {
+      if (performance.now() - lastWheel >= 250) { delete body.dataset.wheelLock; clearInterval(t); }
+    }, 60);
+  }
   const POP = "cubic-bezier(.2, .8, .25, 1)";
   function reveal() {
     if (reduce) return;
@@ -153,14 +175,14 @@
     collapse();
     const last = name.getBoundingClientRect();
     const shown = reveal();                                          // starts the ripple behind the name
-    if (reduce) { body.classList.remove("is-flying", "is-revealing"); return; }
+    if (reduce) { body.classList.remove("is-flying", "is-revealing"); unlockWhenStill(); return; }
     const s = first.width / last.width;
     name.animate(
       [{ transform: `translate(${first.left - last.left}px, ${first.top - last.top}px) scale(${s})` },
        { transform: "translate(0px, 0px) scale(1)" }],
       { duration: 800, delay: 400, easing: "cubic-bezier(.65, 0, .35, 1)", fill: "backwards" }
     ).finished.then(() => body.classList.remove("is-flying"));
-    shown.then(() => body.classList.remove("is-revealing"));
+    shown.then(() => { body.classList.remove("is-revealing"); unlockWhenStill(); });
   }
 
   // ---------- 3. grid ----------
