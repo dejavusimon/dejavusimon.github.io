@@ -4,6 +4,7 @@
 
 body { transition: background-color var(--dur-slow) var(--ease-in-out); overflow-x: hidden; }
 body.is-home { background: var(--canvas); }
+body.is-home.is-frames { background: #161616; }
 
 /* ---- The name while the zipper opens (centred), before it docks into the title card ---- */
 .name-stage { position: fixed; inset: 0; display: grid; place-items: center; pointer-events: none; z-index: var(--z-page); }
@@ -32,6 +33,10 @@ body.is-home .card { background: var(--surface); }
   grid-template-areas: "name nav" ". ." "intro meta"; column-gap: var(--space-5);
 }
 .hero-nav { grid-area: nav; }
+.hero-intro {
+  grid-area: intro; align-self: end; max-width: 30em; margin: 0;
+  font-size: var(--size-small); line-height: 1.5; color: var(--text); opacity: .78;
+}
 body, .card, .topbar { transition: background-color var(--dur-slow) var(--ease-in-out), color var(--dur-slow) var(--ease-in-out); }
 
 /* ---- Objects / Interfaces toggle: a card-sized split-flap; the top leaf drops to flip ---- */
@@ -64,7 +69,7 @@ body.is-home .flap { opacity: 1; }
 .flap-leaf { position: absolute; left: 0; right: 0; top: 0; height: 50%; transform-origin: 50% 100%; transform-style: preserve-3d; z-index: 2; }
 .flap-leaf .flap-half { height: 100%; }
 .flap-leaf .leaf-back { transform: rotateX(180deg); border-radius: 0 0 var(--radius-card) var(--radius-card); }
-.flap-leaf .leaf-back .flap-content { top: -100%; } .hero-intro { grid-area: intro; } .hero-meta { grid-area: meta; }
+.flap-leaf .leaf-back .flap-content { top: -100%; }  .hero-meta { grid-area: meta; }
 
 /* Name block: the clip shortens the word right-to-left; the mark replaces the D at the end */
 .hero-name { grid-area: name; position: relative; transform-origin: 0 0; justify-self: start; visibility: hidden; }
@@ -88,15 +93,33 @@ body.is-docked .hero-name { visibility: visible; }
   position: absolute; inset: 0; transform-style: preserve-3d;
   transition: transform .8s cubic-bezier(.5, 0, .25, 1);
 }
-.is-digital .work-card-inner { transform: rotateX(-180deg); }   /* top edge tips toward you and over */
 .face {
-  position: absolute; inset: 0; padding: var(--card-pad); border-radius: var(--radius-card);
+  position: absolute; inset: 0; border-radius: var(--radius-card);
   backface-visibility: hidden; -webkit-backface-visibility: hidden;
-  background: transparent; transition: background-color var(--dur-base) ease;
 }
-body.is-home .face--front { background: var(--face-light); }
-body.is-home .face--back  { background: var(--face-dark); }
 .face--back { transform: rotateX(180deg); }
+
+/* Each face carries all three sides; only the one it is showing is displayed */
+.panel {
+  position: absolute; inset: 0; padding: var(--card-pad); border-radius: var(--radius-card);
+  overflow: hidden; display: none; background: transparent; transition: background-color var(--dur-base) ease;
+}
+.face[data-show="objects"]    .panel--objects,
+.face[data-show="interfaces"] .panel--interfaces,
+.face[data-show="frames"]     .panel--frames { display: block; }
+body.is-home .panel--objects    { background: var(--face-light); }
+body.is-home .panel--interfaces { background: var(--face-dark); }
+body.is-home .panel--frames     { background: rgba(255,255,255,.08); }
+
+/* Frames: the photo sits sharp on a soft wash of its own colours */
+.frame-wash {
+  position: absolute; inset: -20%; width: 140%; height: 140%; object-fit: cover;
+  filter: blur(28px) saturate(1.35) brightness(1.05); transform: translateZ(0);
+}
+.frame-photo {
+  position: absolute; inset: var(--card-pad); width: calc(100% - 2 * var(--card-pad)); height: calc(100% - 2 * var(--card-pad));
+  object-fit: contain; filter: drop-shadow(0 6px 18px rgba(0,0,0,.25));
+}
 .work-card.is-open { z-index: 1; }
 .work-grid.no-anim .work-card { transition: none; }
 /* Cover: ink sketch by default, the marker rendering on hover/open. Both images sit in one
@@ -113,7 +136,7 @@ body.is-home .work-cover { opacity: 1; }
   transition: opacity .6s var(--ease-in-out); will-change: opacity; backface-visibility: hidden;
 }
 /* dark side: black "paper" screened onto the dark card, so the black disappears instead */
-.face--back .work-cover { background: #000; mix-blend-mode: screen; }
+.panel--interfaces .work-cover { background: #000; mix-blend-mode: screen; }
 .cover-marker { opacity: 0; }
 .work-card.is-open .cover-marker { opacity: 1; }
 .work-card.is-open .cover-sketch { opacity: 0; }
@@ -127,3 +150,25 @@ body.is-home .work-cover { opacity: 1; }
 @media (prefers-reduced-motion: reduce) {
   .work-card, .work-card-inner { transition: none; }
 }
+
+/* ---- Frames: a pool of the photos' colours drifting behind the page ---- */
+.pool { position: fixed; inset: -10%; z-index: 0; opacity: 0; pointer-events: none; overflow: hidden;
+        transition: opacity 1s var(--ease-in-out); filter: blur(70px) saturate(1.15); }
+.is-frames .pool { opacity: 1; }
+.pool i { position: absolute; width: 55vmax; height: 55vmax; border-radius: 50%; opacity: .85;
+          animation: drift 26s ease-in-out infinite alternate; }
+.pool i:nth-child(1) { background: #f26a1b; left: -8%;  top: -12%; }
+.pool i:nth-child(2) { background: #0fb3c4; left: 52%;  top: -18%; animation-duration: 31s; }
+.pool i:nth-child(3) { background: #c0201c; left: 18%;  top: 30%;  animation-duration: 23s; }
+.pool i:nth-child(4) { background: #3d5a94; left: 68%;  top: 34%;  animation-duration: 29s; }
+.pool i:nth-child(5) { background: #d4b07a; left: -14%; top: 62%;  animation-duration: 34s; }
+.pool i:nth-child(6) { background: #8a63a8; left: 40%;  top: 70%;  animation-duration: 27s; }
+.pool i:nth-child(7) { background: #a04a33; left: 78%;  top: 78%;  animation-duration: 33s; }
+.pool i:nth-child(8) { background: #8e4a52; left: 30%;  top: 8%;   animation-duration: 38s; opacity: .6; }
+@keyframes drift { to { transform: translate(6vmax, 5vmax) scale(1.12); } }
+.board, .topbar { position: relative; z-index: 1; }
+.topbar { position: fixed; z-index: var(--z-nav); }
+body.is-home.is-frames .topbar { background: transparent; backdrop-filter: blur(22px) saturate(1.1); -webkit-backdrop-filter: blur(22px) saturate(1.1); }
+body.is-home.is-frames .card--hero { background: rgba(255,255,255,.12); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+.is-frames .flap { color: #1b1b1b; }
+@media (prefers-reduced-motion: reduce) { .pool i { animation: none; } }

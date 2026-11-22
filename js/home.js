@@ -20,6 +20,7 @@
   const stageName = document.querySelector(".name-stage .t-display");
 
   const bar = document.querySelector(".topbar-inner");
+  const intro = document.querySelector(".hero-intro");
   let m = {};   // measurements
   function flapWidth() {
     const g = document.querySelector(".work-grid");
@@ -78,6 +79,7 @@
     block.style.transform = `scale(${lerp(1, m.sMin, a)})`;
     name.style.opacity = 1 - b;
     mark.style.opacity = b;
+    intro.style.opacity = clamp(1 - c * 3) * 0.78;
   }
   let snapTimer;
   function collapse() {
@@ -181,22 +183,24 @@
   });
 
   // decode every cover image up front so the first hover never waits on (or flashes) an image
-  grid.querySelectorAll(".work-cover img").forEach(img => { img.loading = "eager"; img.decode?.().catch(() => {}); });
+  grid.querySelectorAll(".work-cover img, .frame-photo").forEach(img => { img.loading = "eager"; img.decode?.().catch(() => {}); });
 
-  // ---------- 4. Objects / Interfaces toggle ----------
-  // A split-flap tile: the top leaf drops (top to bottom) to reveal the other side, and the
-  // work cards flip over the same way, one after another, as the page turns dark.
+  // ---------- 4. Objects / Interfaces / Frames toggle ----------
+  // A split-flap tile cycles three sides. Each flip drops the tile's top leaf and tips every
+  // work card over top-to-bottom; the card's hidden face is loaded with the next side first.
   const ICON = {
     cube: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 2.8 20.5 7.5v9L12 21.2 3.5 16.5v-9Z"/><path d="M3.5 7.5 12 12.2l8.5-4.7M12 12.2v9"/></svg>',
     cursor: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M5 3.5 19 11l-6.2 1.6L9.6 18.8Z"/><path d="m12.8 12.6 4.6 6.4"/></svg>',
+    frame: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3.5 8V4.5h3.5M17 4.5h3.5V8M20.5 16v3.5H17M7 19.5H3.5V16"/><circle cx="12" cy="12" r="2.6"/></svg>',
   };
   const MODES = [
-    { key: "physical", word: "Objects", icon: ICON.cube },
-    { key: "digital", word: "Interfaces", icon: ICON.cursor },
+    { key: "physical", panel: "objects", word: "Objects", icon: ICON.cube },
+    { key: "digital", panel: "interfaces", word: "Interfaces", icon: ICON.cursor },
+    { key: "frames", panel: "frames", word: "Frames", icon: ICON.frame },
   ];
   const flap = document.querySelector(".flap");
   const face = mo => `<span class="flap-content"><span class="flap-word">${mo.icon}<span class="flap-label">${mo.word}</span></span></span>`;
-  let mode = 0, flipping = false;
+  let mode = 0, flips = 0, flipping = false;
   function renderFlap(cur, next = cur) {
     flap.innerHTML = `
       <span class="flap-half flap-top">${face(MODES[next])}</span>
@@ -207,21 +211,29 @@
       </span>`;
   }
   renderFlap(0);
+  function setPageMode(i) {
+    root.dataset.mode = MODES[i].key;
+    body.classList.toggle("is-digital", i === 1);
+    body.classList.toggle("is-frames", i === 2);
+  }
   function flip() {
     if (flipping) return;
     flipping = true;
-    const next = 1 - mode;
+    const next = (mode + 1) % MODES.length;
     renderFlap(mode, next);
     const leaf = flap.querySelector(".flap-leaf");
-    const done = () => {
-      mode = next; renderFlap(mode); flipping = false;
-      flap.setAttribute("aria-pressed", mode === 1);
-      flap.setAttribute("aria-label", mode ? "Showing interfaces. Flip to show objects" : "Showing objects. Flip to show interfaces");
-    };
-    // page + cards follow the flap
-    root.dataset.mode = MODES[next].key;
-    body.classList.toggle("is-digital", next === 1);
-    cardOrder().forEach((el, k) => { el.querySelector(".work-card-inner").style.transitionDelay = (reduce ? 0 : k * 55) + "ms"; });
+    // cards: load the hidden face with the next side, then tip every card over
+    const hidden = flips % 2 === 0 ? ".face--back" : ".face--front";
+    cards.forEach(el => { el.querySelector(hidden).dataset.show = MODES[next].panel; });
+    flips++;
+    cardOrder().forEach((el, k) => {
+      const inner = el.querySelector(".work-card-inner");
+      inner.style.transitionDelay = (reduce ? 0 : k * 55) + "ms";
+      inner.style.transform = `rotateX(${-180 * flips}deg)`;
+    });
+    setPageMode(next);
+    const label = `Showing ${MODES[next].word.toLowerCase()}. Flip to show ${MODES[(next + 1) % 3].word.toLowerCase()}`;
+    const done = () => { mode = next; renderFlap(mode); flipping = false; flap.setAttribute("aria-label", label); };
     if (reduce) return done();
     leaf.animate([{ transform: "rotateX(0deg)" }, { transform: "rotateX(-180deg)" }],
                  { duration: 520, easing: "cubic-bezier(.55, 0, .85, .35)" })          // falls like a real flap
@@ -236,6 +248,7 @@
     return Math.round(ra.top - rb.top) || ra.left - rb.left;
   });
   flap.addEventListener("click", flip);
+  flap.removeAttribute("aria-pressed");
 
   // ---------- start ----------
   const start = () => { measure(); active = -1; pos = []; layoutGrid(false); };
