@@ -121,12 +121,18 @@
   const grid = document.querySelector(".work-grid");
   const cards = [...grid.querySelectorAll(".work-card")];
   let active = -1, slots = [], pos = [], cols = 3;
+  const gridPool = grid.querySelector(".grid-pool");
+  const poolBlobs = cards.map(el => {
+    if (!el.dataset.c1) return null;
+    return [el.dataset.c1, el.dataset.c2].map(c => { const b = document.createElement("i"); b.style.background = c; gridPool.appendChild(b); return b; });
+  });
 
   function layoutGrid(animate = true, anchor) {
     const gap = parseFloat(getComputedStyle(root).getPropertyValue("--card-gap")) || 12;
     const W = grid.clientWidth;
     cols = W >= 720 ? 3 : 2;
-    const cw = (W - gap * (cols - 1)) / cols, ch = cw * 0.72;
+    const frames = body.classList.contains("is-frames");
+    const cw = (W - gap * (cols - 1)) / cols, ch = frames ? cw * 4 / 3 : cw * 0.72;   // photos are 3:4
     const occ = [];
     const free = (r, c, n) => { for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) if (c + j >= cols || (occ[r + i] && occ[r + i][c + j])) return false; return true; };
     const take = (r, c, n) => { for (let i = 0; i < n; i++) { occ[r + i] ||= []; for (let j = 0; j < n; j++) occ[r + i][c + j] = true; } };
@@ -156,6 +162,13 @@
       el.classList.toggle("is-open", i === active);
     });
     grid.style.height = rows * ch + (rows - 1) * gap + "px";
+    // colour pool: two blobs per photo card, in that photo's own colours, centred on the card
+    slots.forEach(({ i, x, y, w, h }) => {
+      const el = cards[i]; if (!el.dataset.c1) return;
+      const [b1, b2] = poolBlobs[i];
+      b1.style.transform = `translate(${x - w * .15}px, ${y - h * .1}px)`; b1.style.width = w * 1.1 + "px"; b1.style.height = h * .8 + "px";
+      b2.style.transform = `translate(${x + w * .05}px, ${y + h * .35}px)`; b2.style.width = w * 1.1 + "px"; b2.style.height = h * .8 + "px";
+    });
     if (!animate) requestAnimationFrame(() => grid.classList.remove("no-anim"));
   }
   function setActive(i) {
@@ -232,6 +245,7 @@
       inner.style.transform = `rotateX(${-180 * flips}deg)`;
     });
     setPageMode(next);
+    layoutGrid(true);
     const label = `Showing ${MODES[next].word.toLowerCase()}. Flip to show ${MODES[(next + 1) % 3].word.toLowerCase()}`;
     const done = () => { mode = next; renderFlap(mode); flipping = false; flap.setAttribute("aria-label", label); };
     if (reduce) return done();
