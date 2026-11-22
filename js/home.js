@@ -116,7 +116,34 @@
   addEventListener("scroll", collapse, { passive: true });
 
   // ---------- 1. dock after the zipper ----------
+  // About 2 s, one continuous ripple: the big name shrinks into the top-left corner; the title
+  // card rises from the backdrop under it, then the toggle card, then the work cards in waves
+  // spreading out from the title card toward the bottom of the page.
+  if ("scrollRestoration" in history) history.scrollRestoration = "manual";
+  const POP = "cubic-bezier(.2, .8, .25, 1)";
+  function reveal() {
+    if (reduce) return;
+    const rise = (el, delay, dur = 520, opts = {}) => el.animate(
+      [{ opacity: 0, transform: "translateY(18px) scale(.94)" }, { opacity: 1, transform: "none" }],
+      { duration: dur, delay, easing: POP, fill: "backwards", ...opts });
+    const anims = [
+      rise(hero, 750, 520, { pseudoElement: "::before" }),
+      intro.animate([{ opacity: 0 }, { opacity: getComputedStyle(intro).opacity }],
+                    { duration: 450, delay: 1000, easing: "ease-out", fill: "backwards" }),
+      rise(flap, 850),
+    ];
+    // work cards: one wave per diagonal, measured from the title card in the top-left
+    const maxD = Math.max(...pos.map(q => q.r + q.c)) || 1;
+    cards.forEach((el, i) => {
+      const d = pos[i].r + pos[i].c;
+      anims.push(rise(el.querySelector(".work-card-inner"), 950 + d * (550 / maxD), 480));
+    });
+    return Promise.all(anims.map(a => a.finished.catch(() => {})));
+  }
   function dock() {
+    scrollTo(0, 0);
+    body.classList.add("is-revealing");
+    active = -1; layoutGrid(false);
     // One element only: the name that lives in the card. It starts exactly over the big
     // centred name, scaled up, and settles to its own size, so nothing is swapped mid-flight.
     const stage = document.querySelector(".name-stage");
@@ -125,13 +152,15 @@
     stage.remove();
     collapse();
     const last = name.getBoundingClientRect();
-    if (reduce) return body.classList.remove("is-flying");
+    const shown = reveal();                                          // starts the ripple behind the name
+    if (reduce) { body.classList.remove("is-flying", "is-revealing"); return; }
     const s = first.width / last.width;
     name.animate(
       [{ transform: `translate(${first.left - last.left}px, ${first.top - last.top}px) scale(${s})` },
        { transform: "translate(0px, 0px) scale(1)" }],
-      { duration: 1100, easing: "cubic-bezier(.65, 0, .35, 1)" }
+      { duration: 800, delay: 400, easing: "cubic-bezier(.65, 0, .35, 1)", fill: "backwards" }
     ).finished.then(() => body.classList.remove("is-flying"));
+    shown.then(() => body.classList.remove("is-revealing"));
   }
 
   // ---------- 3. grid ----------
@@ -221,7 +250,7 @@
   let pointer = null, closeTimer;
   const canHover = matchMedia("(hover: hover) and (pointer: fine)");
   function track() {
-    if (!pointer || framesMode() || !canHover.matches) return;
+    if (!pointer || framesMode() || !canHover.matches || body.classList.contains("is-revealing") || body.classList.contains("intro-active")) return;
     const overBar = document.elementFromPoint(pointer.clientX, pointer.clientY)?.closest(".topbar");
     const i = overBar ? null : cardAt(pointer);
     clearTimeout(closeTimer);

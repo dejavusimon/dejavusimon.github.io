@@ -187,3 +187,16 @@ body.is-home.is-frames .card--hero { background: rgba(255,255,255,.1); backdrop-
 .is-frames .flap-bottom, .is-frames .flap-leaf .leaf-back { background-position: 0 100%; }
 .is-frames .flap-top::after { background: rgba(0,0,0,.25); }
 @media (prefers-reduced-motion: reduce) { .pool i { animation: none; } }
+/* The title card's fill sits on its own layer, so it can pop up behind the name while the
+   name itself stays visible as it docks. */
+.card--hero { isolation: isolate; }
+.card--hero::before { content: ""; position: absolute; inset: 0; z-index: -1; border-radius: inherit;
+                      background: transparent; transition: background-color var(--dur-slow) var(--ease-in-out); }
+body.is-home .card--hero { background: transparent; }
+body.is-home .card--hero::before { background: var(--surface); }
+body.is-home.is-frames .card--hero { background: transparent; }
+body.is-home.is-frames .card--hero::before { background: rgba(255,255,255,.1); }
+/* while the page assembles, nothing reacts to the pointer */
+body.is-revealing .work-grid, body.is-revealing .flap { pointer-events: none; }
+body.is-revealing { overflow: hidden; }   /* leftover scroll momentum from unzipping must not scroll the page */
+body.is-revealing .topbar { background: transparent; backdrop-filter: none; }   /* no band across the top while the page fades to grey */

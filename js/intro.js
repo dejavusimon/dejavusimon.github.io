@@ -110,11 +110,10 @@
   function release() { if (target > 0.7) target = 1; }
   function finish() {
     finishing = true;
-    setTimeout(() => {
-      svg.classList.add("is-done");
-      document.dispatchEvent(new CustomEvent("intro:done"));   // page takes over (name docks, cards appear)
-    }, 250);
-    setTimeout(() => { svg.remove(); document.body.classList.remove("intro-active"); scrollTo(0, 0); }, 1000);
+    scrollTo(0, 0);
+    svg.classList.add("is-done");                                // zipper clears (0.35 s), the big name stays
+    document.dispatchEvent(new CustomEvent("intro:done"));       // page takes over: name docks, cards ripple in
+    setTimeout(() => { svg.remove(); document.body.classList.remove("intro-active"); }, 450);
   }
 
   let wheelTimer;
