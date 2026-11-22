@@ -319,3 +319,18 @@ body:not(.is-home) .hero-toggle, body:not(.is-home) .hero-intro { visibility: hi
 .hero-toggle, .hero-social { grid-area: auto; }
 /* desktop: the open intro sits on the card's bottom edge, with the same margin as on the left */
 @media (min-width: 721px) { .hero-intro { top: auto; bottom: var(--card-pad); } }
+/* reveal: held hidden, let in one by one */
+body.is-revealing .hero-bg, body.is-revealing .flap, body.is-revealing .hero-toggle, body.is-revealing .work-card-inner {
+  opacity: 0; transform: translateY(18px) scale(.94);
+}
+body.is-revealing .rv-in { opacity: 1; transform: none;
+  transition: opacity .5s ease-out, transform .52s cubic-bezier(.2, .8, .25, 1) !important; }
+/* the name swaps colour instantly with the section (no fade through the background colour) */
+.hero-name, .t-name, .name-mark { transition: none; }
+.t-name { color: var(--ink); }
+/* open: SI stays red (phones have no hover) */
+.card--hero.is-open .si { color: var(--pms-186); }
+@media (max-width: 720px) {
+  .hero-toggle { margin-top: 0; }
+  .hero-social { bottom: calc(var(--card-pad) - 3px); }
+}

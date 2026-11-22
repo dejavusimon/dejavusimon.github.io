@@ -82,14 +82,14 @@
     const gap = parseFloat(getComputedStyle(root).getPropertyValue("--card-gap")) || 12;
     const heroW = gW - m.flapW - gap, inner = heroW - pad * 2;
     const ph = phone();
-    const introTop = pad + cap + (ph ? 12 : 20);
+    const introTop = pad + cap + (ph ? 14 : 20);
     hero.style.setProperty("--intro-top", introTop + "px");
     hero.style.setProperty("--intro-w", (ph ? inner : Math.min(inner - 200, (gW - gap * 2) / 3 - pad)) + "px");
     const introH = intro.offsetHeight;
     if (ph) {
       const before = Math.max(cardHeight() * 0.7, pad * 2 + cap + 16 + introH);   // the old phone card
       m.hBase = Math.round(Math.max(before * 0.5, pad * 2 + cap + 12 + 28));
-      m.hOpen = Math.round(introTop + introH + 14 + 34 + pad - 6);
+      m.hOpen = Math.round(introTop + introH + 12 + 20 + pad + 4);    // equal gaps name–intro–icons
     } else {
       m.hBase = Math.round(cardHeight() * 0.7);
       m.hOpen = Math.round(Math.max(m.hBase, introTop + introH + pad + 4));
@@ -105,9 +105,13 @@
   }
   function placeToggle() {
     const s = m.ph ? 28 : 36;
-    hero.style.setProperty("--tog-x", (open ? m.inner - s : 0) + "px");
-    if (m.ph) hero.style.setProperty("--tog-top", (open ? m.pad + m.cap / 2 - s / 2 : m.pad + m.cap + 12) + "px");
-    else hero.style.removeProperty("--tog-top");
+    if (m.ph) {
+      hero.style.setProperty("--tog-x", (open ? m.inner - s + 4 : 0) + "px");
+      hero.style.setProperty("--tog-top", open ? `calc(100% - ${m.pad + 14 + s / 2}px)` : `calc(50% - ${s / 2}px)`);
+    } else {
+      hero.style.setProperty("--tog-x", (open ? m.inner - s : 0) + "px");
+      hero.style.removeProperty("--tog-top");
+    }
   }
   let openAnim = 0;
   function setOpen(v) {
@@ -191,25 +195,22 @@
     }, 60);
   }
   const POP = "cubic-bezier(.2, .8, .25, 1)";
+  // Each piece is held hidden by body.is-revealing and let in by adding .rv-in at its moment
+  // (plain CSS transitions; iOS Safari did not hold animations' first frame during a delay,
+  // so the toggle card was showing next to the big name).
   function reveal() {
-    if (reduce) return;
-    const rise = (el, delay, dur = 520, opts = {}) => { try { return el.animate(
-      [{ opacity: 0, transform: "translateY(18px) scale(.94)" }, { opacity: 1, transform: "none" }],
-      { duration: dur, delay, easing: POP, fill: "backwards", ...opts }); } catch (e) { return { finished: Promise.resolve() }; } };
-    const anims = [
-      rise(hero.querySelector(".hero-bg"), 750, 520),
-      rise(flap, 850),
-      (() => { try { return toggle.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 400, delay: 1000, fill: "backwards" }); }
-               catch (e) { return { finished: Promise.resolve() }; } })(),
-    ];
+    if (reduce) return Promise.resolve();
+    const els = [];
+    const at = (el, delay) => { if (!el) return; els.push(el); setTimeout(() => el.classList.add("rv-in"), delay); };
+    at(hero.querySelector(".hero-bg"), 750);
+    at(flap, 850);
+    at(toggle, 1000);
     // work cards: one wave per diagonal, measured from the title card in the top-left
     const maxD = Math.max(...pos.map(q => q.r + q.c)) || 1;
-    cards.forEach((el, i) => {
-      const d = pos[i].r + pos[i].c;
-      anims.push(rise(el.querySelector(".work-card-inner"), 950 + d * (550 / maxD), 480));
-    });
-    return Promise.all(anims.map(a => a.finished.catch(() => {})));
+    cards.forEach((el, i) => at(el.querySelector(".work-card-inner"), 950 + (pos[i].r + pos[i].c) * (550 / maxD)));
+    return new Promise(r => setTimeout(() => { r(); requestAnimationFrame(() => els.forEach(el => el.classList.remove("rv-in"))); }, 2050));
   }
+
   function dock() {
     scrollTo(0, 0);
     body.classList.add("is-revealing");
@@ -358,7 +359,13 @@
                              { duration: 320, easing: "cubic-bezier(.15, .65, .35, 1)" }).finished;
       }).then(done, done);
   }
+  const touchOnly = matchMedia("(hover: none)");
   grid.addEventListener("click", e => {
+    if (touchOnly.matches && framesMode() && !e.target.closest(".frame-pin")) {
+      const panel = e.target.closest(".work-card")?.querySelector(".face--front .panel--frames:not(.is-empty)");
+      if (panel) turnPhoto(panel, !panel.classList.contains("show-map"));
+      return;
+    }
     const pin = e.target.closest(".frame-pin"); if (!pin) return;
     e.stopPropagation();
     const panel = pin.closest(".panel--frames");
