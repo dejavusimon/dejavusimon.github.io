@@ -1,0 +1,35 @@
+/* Base styles: reset + the type styles every page uses. Values come from tokens.css. */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-text);
+  font-size: var(--size-body);
+  line-height: var(--leading-body);
+}
+img, svg, video { display: block; max-width: 100%; }
+a { color: inherit; }
+
+/* Type styles */
+.t-display {
+  font-family: var(--font-display); font-weight: var(--weight-display);
+  font-size: var(--size-display); line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-display);
+}
+.t-h1 { font-family: var(--font-display); font-weight: var(--weight-display); font-size: var(--size-h1); line-height: 1.05; }
+.t-h2 { font-family: var(--font-display); font-weight: var(--weight-display); font-size: var(--size-h2); line-height: 1.15; }
+.t-body  { font-size: var(--size-body); }
+.t-small { font-size: var(--size-small); color: var(--text-muted); }
+.t-label {
+  font-size: var(--size-label); letter-spacing: var(--tracking-label);
+  text-transform: uppercase; color: var(--text-muted);
+}
+
+.page { max-width: var(--page-max); margin: 0 auto; padding: 0 var(--page-gutter); }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}

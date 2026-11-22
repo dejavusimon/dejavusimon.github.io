@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Style guide — DEJAVUSIMON</title>
+  <meta name="robots" content="noindex">
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&family=Space+Grotesk:wght@700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/tokens.css">
+  <link rel="stylesheet" href="css/base.css">
+  <style>
+    .sg { padding: var(--space-9) 0; }
+    .sg section { margin-top: var(--space-9); }
+    .sg h2 { margin-bottom: var(--space-5); }
+    .swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: var(--space-4); }
+    .sw { border: 1px solid var(--line); }
+    .sw i { display: block; height: 96px; }
+    .sw div { padding: var(--space-3); font-size: var(--size-small); }
+    .sw code { color: var(--text-muted); font-size: var(--size-micro); }
+    .row { display: grid; grid-template-columns: 160px 1fr; gap: var(--space-5); align-items: baseline;
+           padding: var(--space-5) 0; border-top: 1px solid var(--line); }
+    .row > code { color: var(--text-muted); font-size: var(--size-micro); }
+    .space { display: flex; align-items: center; gap: var(--space-4); padding: var(--space-2) 0; }
+    .space i { display: block; height: 12px; background: var(--ink); }
+    .space code { width: 80px; color: var(--text-muted); font-size: var(--size-micro); }
+    .motion { display: flex; gap: var(--space-5); flex-wrap: wrap; }
+    .motion button { font: inherit; font-size: var(--size-small); padding: var(--space-3) var(--space-4);
+                     background: var(--paper); border: 1px solid var(--ink); cursor: pointer; }
+    .dot { width: 16px; height: 16px; background: var(--ink); margin-top: var(--space-3); transition: transform var(--dur-slow) var(--ease-in-out); }
+    .motion div.go .dot { transform: translateX(160px); }
+  </style>
+</head>
+<body>
+  <main class="page sg">
+    <p class="t-label">DEJAVUSIMON · design rules</p>
+    <h1 class="t-display" style="margin-top: var(--space-4)">Style guide</h1>
+    <p class="t-small" style="margin-top: var(--space-4); max-width: var(--text-max)">
+      Every value on this page comes from <code>css/tokens.css</code>. Change it there and the whole site follows.
+    </p>
+
+    <section>
+      <h2 class="t-h2">Colour</h2>
+      <div class="swatches">
+        <div class="sw"><i style="background:var(--ink)"></i><div>Ink<br><code>--ink #111111</code></div></div>
+        <div class="sw"><i style="background:var(--paper)"></i><div>Paper<br><code>--paper #ffffff</code></div></div>
+        <div class="sw"><i style="background:var(--grey-700)"></i><div>Grey 700<br><code>--grey-700 #555555</code></div></div>
+        <div class="sw"><i style="background:var(--grey-500)"></i><div>Grey 500<br><code>--grey-500 #8a8a8a</code></div></div>
+        <div class="sw"><i style="background:var(--grey-300)"></i><div>Grey 300<br><code>--grey-300 #cfcfcf</code></div></div>
+        <div class="sw"><i style="background:var(--grey-100)"></i><div>Grey 100<br><code>--grey-100 #f2f2f0</code></div></div>
+      </div>
+    </section>
+
+    <section>
+      <h2 class="t-h2">Type</h2>
+      <div class="row"><code>.t-display<br>Space Grotesk 700</code><div class="t-display">DEJAVUSIMON</div></div>
+      <div class="row"><code>.t-h1</code><div class="t-h1">Halo &amp; Ribbon</div></div>
+      <div class="row"><code>.t-h2</code><div class="t-h2">Prototyping process</div></div>
+      <div class="row"><code>.t-body<br>Inter 17px</code><p class="t-body" style="max-width:var(--text-max)">Halo integrates digital signage and architectural lighting into one fixture, installed in over 600 Tim Hortons locations across Canada.</p></div>
+      <div class="row"><code>.t-small</code><p class="t-small">Photos courtesy of EQ3.</p></div>
+      <div class="row"><code>.t-label</code><p class="t-label">Portfolio under maintenance</p></div>
+    </section>
+
+    <section>
+      <h2 class="t-h2">Space</h2>
+      <div class="space"><code>--space-1</code><i style="width:var(--space-1)"></i></div>
+      <div class="space"><code>--space-2</code><i style="width:var(--space-2)"></i></div>
+      <div class="space"><code>--space-3</code><i style="width:var(--space-3)"></i></div>
+      <div class="space"><code>--space-4</code><i style="width:var(--space-4)"></i></div>
+      <div class="space"><code>--space-5</code><i style="width:var(--space-5)"></i></div>
+      <div class="space"><code>--space-6</code><i style="width:var(--space-6)"></i></div>
+      <div class="space"><code>--space-7</code><i style="width:var(--space-7)"></i></div>
+      <div class="space"><code>--space-8</code><i style="width:var(--space-8)"></i></div>
+      <div class="space"><code>--space-9</code><i style="width:var(--space-9)"></i></div>
+      <div class="space"><code>--space-10</code><i style="width:var(--space-10)"></i></div>
+    </section>
+
+    <section>
+      <h2 class="t-h2">Motion</h2>
+      <div class="motion">
+        <div><button type="button" onclick="this.parentNode.classList.toggle('go')">--ease-in-out · --dur-slow</button><div class="dot"></div></div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

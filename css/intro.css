@@ -1,0 +1,10 @@
+/* Zipper intro: a black cover the visitor unzips to enter the site. */
+
+.intro {
+  position: fixed; inset: 0; width: 100%; height: 100%;
+  z-index: var(--z-intro); touch-action: none;
+}
+.intro .pull { cursor: grab; }
+.intro.dragging .pull { cursor: grabbing; }
+.intro.is-done { opacity: 0; transition: opacity var(--dur-slow) ease; pointer-events: none; }
+body.intro-active { overflow: hidden; }

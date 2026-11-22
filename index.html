@@ -4,199 +4,32 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>DEJAVUSIMON — Sisheng Su</title>
-  <meta name="description" content="Portfolio of Sisheng (Simon) Su — under maintenance.">
+  <meta name="description" content="Portfolio of Sisheng (Simon) Su, product designer in Toronto.">
   <link rel="icon" href="/favicon.ico" sizes="any">
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/icons/favicon-32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/assets/icons/favicon-16.png">
   <link rel="apple-touch-icon" href="/assets/icons/apple-touch-icon.png">
   <link rel="manifest" href="/site.webmanifest">
-  <meta name="theme-color" content="#ffffff">
+  <meta name="theme-color" content="#111111">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400&family=Space+Grotesk:wght@700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&family=Space+Grotesk:wght@700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/tokens.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/intro.css">
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { height: 100%; }
-    body {
-      font-family: Inter, system-ui, sans-serif;
-      background: #fff; color: #111;
-      display: flex; align-items: center; justify-content: center;
-      text-align: center; overflow-x: hidden;
-    }
-    main { width: 100%; }
-    .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-
-    /* DEJAVU | name + email | SIMON — the words part evenly to reveal two lines */
-    .masthead {
-      font-family: "Space Grotesk", sans-serif; font-weight: 700;
-      font-size: clamp(40px, 8vw, 88px); letter-spacing: 0.02em; line-height: 1;
-      display: flex; justify-content: center; align-items: last baseline;  /* lines sit on the wordmark's baseline */
-      height: 1em; flex-wrap: wrap; align-content: flex-end;               /* row height fixed so the bar below never jumps */
-    }
-    .w { font-size: calc(1em * var(--wscale, 1)); transition: font-size .7s cubic-bezier(.65, 0, .35, 1); }
-    .contact {
-      width: 0; overflow: hidden; flex: none;
-      transition: width .7s cubic-bezier(.65, 0, .35, 1);
-    }
-    .contact-inner {
-      width: max-content;
-      display: flex; flex-direction: column; align-items: flex-start;   /* both lines share one left edge */
-      padding: 0 24px;                                                 /* equal gap to DEJAVU and SIMON */
-      font-family: Inter, system-ui, sans-serif; font-weight: 400;
-      font-size: 13px; line-height: 1.32; letter-spacing: 0.12em;
-      text-transform: uppercase; white-space: nowrap; color: #555;
-      text-align: left; opacity: 0; transition: opacity .35s ease;
-    }
-    .contact-inner a { display: inline-flex; align-items: center; gap: 0.7em; color: inherit; text-decoration: none; }
-    .contact-inner a:hover { text-decoration: underline; text-underline-offset: 3px; }
-    .open .contact-inner { opacity: 1; transition-delay: .3s; }
-    .status {
-      font-size: 13px; letter-spacing: 0.12em;
-      text-transform: uppercase; color: #555;
-    }
-    .logo-btn {
-      position: fixed; top: 20px; left: 20px; z-index: 2;
-      background: none; border: 0; padding: 0; cursor: pointer; line-height: 0;
-    }
-    .logo-btn img { width: 34px; height: auto; display: block; }
-    .logo-btn:focus-visible { outline: 2px solid #111; outline-offset: 4px; }
-    /* small arrow at the logo's lower-right corner, nudging toward it */
-    .nudge {
-      position: absolute; left: calc(100% + 2px); top: calc(100% + 2px);
-      width: 13px; height: 13px; overflow: visible;
-      will-change: transform; backface-visibility: hidden;
-      animation: nudge 1.3s ease-in-out infinite;
-    }
-    @keyframes nudge { 0%, 100% { transform: translate3d(3px, 3px, 0); } 50% { transform: translate3d(0, 0, 0); } }
-    @media (max-width: 600px) {
-      .logo-btn { top: 12px; left: 12px; }
-      .logo-btn img { width: 26px; }
-    }
-
-    /* Loading bar made of the logo, repeated edge to edge */
-    .loader {
-      --tile-h: 34px;   /* logo height */
-      --tile-w: 41px;   /* logo width, no gap: tiles join into one continuous band */
-      position: relative; width: 100%; height: var(--tile-h);
-      margin-top: 64px;
-    }
-    .loader .track, .loader .ink {
-      position: absolute; inset: 0;
-      background-repeat: repeat-x;
-      background-size: var(--tile-w) var(--tile-h);
-      animation: flow 1.6s linear infinite;   /* tiles stream right → left */
-    }
-    .loader .track { background-image: var(--outline); }
-    .loader .ink   { background-image: var(--solid); clip-path: inset(0 calc(100% - var(--p, 0%)) 0 0); }
-    @keyframes flow { to { background-position: calc(-1 * var(--tile-w)) 0; } }
-
-    .status { margin-top: 68px; display: inline-flex; align-items: center; gap: 9px; }
-    .gear { width: 14px; height: 14px; animation: spin 5s linear infinite; }
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    /* Phones: same parting animation, smaller name/email so everything fits on one row */
-    @media (max-width: 640px) {
-      .contact-inner { font-size: 8.5px; letter-spacing: 0.08em; padding: 0 10px; }
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-      .loader .track, .loader .ink, .nudge, .gear { animation: none; }
-      .contact, .contact-inner, .w { transition: none !important; }
-    }
+    /* Temporary home behind the zipper, until the real home page is designed */
+    .home { min-height: 100vh; display: grid; place-items: center; text-align: center; }
+    .home .t-label { margin-top: var(--space-4); }
   </style>
 </head>
 <body>
-  <button class="logo-btn" type="button" aria-expanded="false" aria-controls="contact" aria-label="Show contact info">
-    <img src="assets/logo.png" alt="">
-    <svg class="nudge" viewBox="0 0 24 24" aria-hidden="true" shape-rendering="geometricPrecision">
-      <path d="M6.76 24.00 L0.00 24.00 L0.00 0.00 L24.00 0.00 L24.00 6.76 L6.80 6.80Z" fill="#111"/>
-    </svg>
-  </button>
-  <main>
-    <h1 class="sr-only">DEJAVUSIMON</h1>
-    <div class="masthead" aria-hidden="false">
-      <span class="w w-left" aria-hidden="true">DEJAVU</span>
-      <div class="contact" id="contact" aria-hidden="true">
-        <div class="contact-inner">
-          <span class="name">Sisheng Su</span>
-          <a href="mailto:dejavus.work@gmail.com" tabindex="-1">
-            dejavus.work@gmail.com</a>
-        </div>
-      </div>
-      <span class="w w-right" aria-hidden="true">SIMON</span>
+  <main class="home">
+    <div>
+      <h1 class="t-display">DEJAVUSIMON</h1>
+      <p class="t-label">Sisheng Su</p>
     </div>
-    <div class="loader" role="progressbar" aria-label="Portfolio under maintenance">
-      <div class="track"></div>
-      <div class="ink"></div>
-    </div>
-    <p class="status">
-      <svg class="gear" viewBox="-12 -12 24 24" aria-hidden="true"><g fill="#555"><rect x="-1.6" y="-11" width="3.2" height="4.5" rx="0.6" transform="rotate(0)"/><rect x="-1.6" y="-11" width="3.2" height="4.5" rx="0.6" transform="rotate(45)"/><rect x="-1.6" y="-11" width="3.2" height="4.5" rx="0.6" transform="rotate(90)"/><rect x="-1.6" y="-11" width="3.2" height="4.5" rx="0.6" transform="rotate(135)"/><rect x="-1.6" y="-11" width="3.2" height="4.5" rx="0.6" transform="rotate(180)"/><rect x="-1.6" y="-11" width="3.2" height="4.5" rx="0.6" transform="rotate(225)"/><rect x="-1.6" y="-11" width="3.2" height="4.5" rx="0.6" transform="rotate(270)"/><rect x="-1.6" y="-11" width="3.2" height="4.5" rx="0.6" transform="rotate(315)"/><circle r="7.5"/></g><circle r="2.8" fill="#fff"/></svg>
-      Portfolio under maintenance
-    </p>
   </main>
-
-  <script>
-    // Logo redrawn as vector: a wave band above a solid bar (700 × 560 units).
-    // Only the top and bottom edges are outlined (no side edges), so neighbouring
-    // tiles join into one continuous wave line and one continuous bar.
-    const W = "M0 47 C50 81 100 93 152 93 C262 93 404 0 545 0 C600 0 650 15 697 46";
-    const Wb = "M697 241 C650 210 600 195 545 195 C404 195 262 288 152 288 C100 288 50 276 0 242";
-    const shape = solid => `
-      <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 -8 697 573' preserveAspectRatio='none'>
-        <path d='${W} L${Wb.slice(1)} Z M0 340 H697 V557 H0 Z' fill='${solid ? "#111" : "#fff"}'/>
-        ${solid ? "" : `<g fill='none' stroke='#111' stroke-width='1.5' vector-effect='non-scaling-stroke'>
-          <path vector-effect='non-scaling-stroke' d='${W}'/>
-          <path vector-effect='non-scaling-stroke' d='${Wb}'/>
-          <path vector-effect='non-scaling-stroke' d='M0 340 H697 M0 557 H697'/>
-        </g>`}
-      </svg>`;
-    const uri = s => `url("data:image/svg+xml,${encodeURIComponent(s.replace(/\s+/g, " "))}")`;
-    const loader = document.querySelector(".loader");
-    loader.style.setProperty("--outline", uri(shape(false)));
-    loader.style.setProperty("--solid",   uri(shape(true)));
-
-    // Logo toggles the contact info (no page reload).
-    const btn = document.querySelector(".logo-btn");
-    const masthead = document.querySelector(".masthead");
-    const contact = document.getElementById("contact");
-    const inner = contact.querySelector(".contact-inner");
-    const words = [...masthead.querySelectorAll(".w")];
-    function setOpen(open) {
-      masthead.classList.toggle("open", open);
-      btn.setAttribute("aria-expanded", open);
-      btn.setAttribute("aria-label", open ? "Hide contact info" : "Show contact info");
-      contact.setAttribute("aria-hidden", !open);
-      inner.querySelectorAll("a").forEach(a => a.tabIndex = open ? 0 : -1);
-      const cw = inner.offsetWidth;
-      contact.style.width = open ? cw + "px" : "0px";
-      // If DEJAVU + lines + SIMON won't fit the screen, shrink the two words just enough
-      let scale = 1;
-      if (open) {
-        const wordsW = words.reduce((t, w) => t + w.scrollWidth / (parseFloat(getComputedStyle(masthead).getPropertyValue("--wscale")) || 1), 0);
-        const avail = masthead.clientWidth - 24;
-        if (wordsW + cw > avail) scale = Math.max(0.5, (avail - cw) / wordsW);
-      }
-      masthead.style.setProperty("--wscale", scale.toFixed(3));
-    }
-    btn.addEventListener("click", () => setOpen(!masthead.classList.contains("open")));
-    document.addEventListener("keydown", e => { if (e.key === "Escape") setOpen(false); });
-    const refit = () => {
-      const els = [contact, ...words]; els.forEach(e => e.style.transition = "none");
-      setOpen(masthead.classList.contains("open")); contact.offsetWidth;
-      els.forEach(e => e.style.transition = "");
-    };
-    refit();
-    addEventListener("resize", refit);
-    document.fonts && document.fonts.ready.then(refit);
-
-    // Progress that keeps creeping forward but never reaches the end.
-    const start = performance.now();
-    (function tick(now) {
-      const t = (now - start) / 1000;
-      const p = 100 * (1 - 1 / (1 + t / 20));   // 50% at 20s, 75% at 1 min, 90% at 3 min… never 100%
-      loader.style.setProperty("--p", p.toFixed(3) + "%");
-      requestAnimationFrame(tick);
-    })(start);
-  </script>
+  <script src="js/intro.js"></script>
 </body>
 </html>
