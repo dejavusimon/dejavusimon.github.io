@@ -15,6 +15,10 @@
   --grey-100:     #f2f2f0;  /* image placeholders, subtle fills */
   --accent:       #111111;  /* reserved: kept monochrome for now */
 
+  /* Zipper intro */
+  --zip-pull:     #ffffff;  /* the logo pull */
+  --zip-rail:     #6e6e6e;  /* the zipper rails */
+
   --text:         var(--ink);
   --text-muted:   var(--grey-700);
   --bg:           var(--paper);
@@ -67,7 +71,6 @@
   --dur-slow:    .7s;
 
   /* ---- Depth ---- */
-  --shadow-handle: 0 2px 3px rgba(0, 0, 0, .35), 0 6px 10px rgba(0, 0, 0, .18);
   --z-page:   1;
   --z-nav:    50;
   --z-intro:  100;

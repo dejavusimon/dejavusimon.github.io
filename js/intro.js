@@ -5,7 +5,7 @@
 (() => {
   const NS = "http://www.w3.org/2000/svg";
   const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
-  const INK = css("--ink") || "#111", ZIP = css("--paper") || "#fff";
+  const INK = css("--ink") || "#111", PULL = css("--zip-pull") || "#fff", RAIL = css("--zip-rail") || "#6e6e6e";
 
   // Logo turned vertical, in its own units (557 wide x 697 tall): wave on the left, bar on the right
   const LW = 557, LH = 697, WAVE = [46, 242], BAR = [340, 557];
@@ -21,28 +21,19 @@
         <rect class="m-all" x="0" y="0" fill="#fff"/>
         <path class="m-hole" fill="#000"/>
       </mask>
-      <linearGradient id="zipGap" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0" stop-color="${INK}" stop-opacity="0" class="gap-top"/>
-        <stop offset="1" stop-color="${INK}" stop-opacity="1"/>
-      </linearGradient>
-      <filter id="zipShadow" x="-60%" y="-30%" width="220%" height="180%">
-        <feDropShadow dx="0" dy="2" stdDeviation="1.6" flood-color="#000" flood-opacity=".45"/>
-        <feDropShadow dx="0" dy="5" stdDeviation="4" flood-color="#000" flood-opacity=".22"/>
-      </filter>
     </defs>
     <rect class="cover" x="0" y="0" fill="${INK}" mask="url(#zipMask)"/>
-    <rect class="gap" fill="url(#zipGap)"/>
-    <path class="rail rail-l" fill="none" stroke="${ZIP}"/>
-    <path class="rail rail-r" fill="none" stroke="${ZIP}"/>
+    <path class="rail rail-l" fill="none" stroke="${RAIL}"/>
+    <path class="rail rail-r" fill="none" stroke="${RAIL}"/>
     <g class="pull">
       <rect class="hit" fill="transparent"/>
-      <g class="logo" fill="${ZIP}" filter="url(#zipShadow)">${LOGO}</g>
+      <g class="logo" fill="${PULL}">${LOGO}</g>
     </g>`;
   document.body.prepend(svg);
   document.body.classList.add("intro-active");
 
   const q = s => svg.querySelector(s);
-  const cover = q(".cover"), all = q(".m-all"), hole = q(".m-hole"), gap = q(".gap"), gapTop = q(".gap-top"),
+  const cover = q(".cover"), all = q(".m-all"), hole = q(".m-hole"),
         railL = q(".rail-l"), railR = q(".rail-r"), logo = q(".logo"), hit = q(".hit");
 
   let W, H, cx, S, k, ox, wL, wR, xL, xR;
@@ -56,8 +47,6 @@
     railL.setAttribute("stroke-width", wL); railR.setAttribute("stroke-width", wR);
     hit.setAttribute("x", ox - 24); hit.setAttribute("y", -12);
     hit.setAttribute("width", LW * k + 48); hit.setAttribute("height", S + 24);
-    gap.setAttribute("x", xL + wL / 2 - 0.5); gap.setAttribute("width", (xR - wR / 2) - (xL + wL / 2) + 1);
-    gap.setAttribute("height", S + 2);   // overlaps the cover below by 2px so no seam shows
   }
 
   const easeOut = t => 1 - Math.pow(1 - Math.min(1, Math.max(0, t)), 3);
@@ -72,22 +61,18 @@
   function draw() {
     const top = p * (H - S), bot = top + S - 1, lift = Math.max(8, top);
     const spread = Math.min(cx * 0.95 * easeOut(p / 0.5), lift * 0.9 + 4) + extra * W;
-    const eL = xL - wL / 2, eR = xR + wR / 2;                  // outer edges of the zipper
-    const xeL = eL - spread, xeR = eR + spread;
+    const xeL = xL - spread, xeR = xR + spread;
     const open = top > 0.5;
 
-    // opening: from the pull's bottom, up both outer edges, out along the curves
+    // opening: from the top of the pull, out along the two curves
     hole.setAttribute("d", open
-      ? `M${eL} ${bot} L${eL} ${top} ${side(eL, xeL, top, lift)} L${xeR} ${-lift * 0.15}
-         C${xeR + (eR - xeR) * 0.5} ${lift * 0.1} ${eR} ${top - lift * 0.55} ${eR} ${top} L${eR} ${bot} Z`
+      ? `M${xL} ${top} ${side(xL, xeL, top, lift)} L${xeR} ${-lift * 0.15}
+         C${xeR + (xR - xeR) * 0.5} ${lift * 0.1} ${xR} ${top - lift * 0.55} ${xR} ${top} Z`
       : "");
-    railL.setAttribute("d", `M${xL} ${bot - 1} L${xL} ${H + 2}`);
-    railR.setAttribute("d", `M${xR} ${bot - 1} L${xR} ${H + 2}`);
-
-    // black between the logo halves fades out toward the opening instead of a hard edge
-    gap.setAttribute("y", top);
-    gap.style.display = open ? "" : "none";
-    gapTop.setAttribute("stop-opacity", 0);
+    // grey rails: curved above the pull (edging the cover), straight below it
+    const up = (x0, xe) => open ? `M${x0} ${top + 0.5} L${x0} ${top} ${side(x0, xe, top, lift)} ` : "";
+    railL.setAttribute("d", up(xL, xeL) + `M${xL} ${bot - 1} L${xL} ${H + 2}`);
+    railR.setAttribute("d", up(xR, xeR) + `M${xR} ${bot - 1} L${xR} ${H + 2}`);
 
     logo.setAttribute("transform", `translate(${ox} ${top}) scale(${k}) matrix(0 -1 1 0 0 ${LH})`);
     hit.setAttribute("transform", `translate(0 ${top})`);
