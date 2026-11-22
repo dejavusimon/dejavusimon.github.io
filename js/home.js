@@ -51,9 +51,10 @@
   }
 
   // ---------- 2. collapse on scroll ----------
-  function collapse() {
-    if (!m.h0) return;
-    const c = clamp(scrollY / (m.h0 - m.hMin));
+  // Follows the scroll for the first half; past 50% it finishes on its own to the logo bar,
+  // so the card never rests in a half-collapsed state.
+  let shown = 0, goal = 0, raf = 0;
+  function apply(c) {
     hero.style.setProperty("--hero-h", lerp(m.h0, m.hMin, c) + "px");
     const a = ease(clamp(c / 0.75));                 // shorten + shrink
     const b = ease(clamp((c - 0.7) / 0.3));          // D → mark
@@ -61,6 +62,18 @@
     block.style.transform = `scale(${lerp(1, m.sMin, a)})`;
     name.style.opacity = 1 - b;
     mark.style.opacity = b;
+  }
+  function step() {
+    shown += (goal - shown) * (reduce ? 1 : 0.16);
+    if (Math.abs(goal - shown) < 0.002) shown = goal;
+    apply(shown);
+    raf = shown === goal ? 0 : requestAnimationFrame(step);
+  }
+  function collapse() {
+    if (!m.h0) return;
+    const s = clamp(scrollY / (m.h0 - m.hMin));
+    goal = s < 0.5 ? s : 1;
+    if (!raf) raf = requestAnimationFrame(step);
   }
   addEventListener("scroll", collapse, { passive: true });
 
@@ -84,57 +97,78 @@
   }
 
   // ---------- 3. grid ----------
+  // Which card is hovered is worked out from the settled layout (not from what's under the
+  // pointer mid-animation), and a card grows from the cell it sits in now, so it never jumps
+  // away from the cursor and two cards can't keep trading places.
   const grid = document.querySelector(".work-grid");
   const cards = [...grid.querySelectorAll(".work-card")];
-  let active = -1, anchors = [];
+  let active = -1, slots = [], pos = [], cols = 3;
 
-  function layoutGrid(animate = true) {
+  function layoutGrid(animate = true, anchor) {
     const gap = parseFloat(getComputedStyle(root).getPropertyValue("--card-gap")) || 12;
     const W = grid.clientWidth;
-    const cols = W >= 720 ? 3 : 2;
+    cols = W >= 720 ? 3 : 2;
     const cw = (W - gap * (cols - 1)) / cols, ch = cw * 0.72;
-    const occ = [];                                   // occupied cells, occ[row][col]
+    const occ = [];
     const free = (r, c, n) => { for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) if (c + j >= cols || (occ[r + i] && occ[r + i][c + j])) return false; return true; };
     const take = (r, c, n) => { for (let i = 0; i < n; i++) { occ[r + i] ||= []; for (let j = 0; j < n; j++) occ[r + i][c + j] = true; } };
-    const pos = [];
-    // the hovered card grows from its own cell (shifted left if it's in the last column)
+    const next = [];
     if (active >= 0) {
-      const a = anchors[active] || { r: Math.floor(active / cols), c: active % cols };
-      const c = Math.min(a.c, cols - 2), r = a.r;
-      take(r, c, 2); pos[active] = { r, c, n: 2 };
+      const at = anchor || pos[active] || { r: Math.floor(active / cols), c: active % cols };
+      const r = at.r, c = Math.min(at.c, cols - 2);
+      take(r, c, 2); next[active] = { r, c, n: 2 };
     }
     cards.forEach((_, i) => {
       if (i === active) return;
-      for (let r = 0; ; r++) { let placed = false;
-        for (let c = 0; c < cols; c++) if (free(r, c, 1)) { take(r, c, 1); pos[i] = { r, c, n: 1 }; placed = true; break; }
-        if (placed) break; }
+      for (let r = 0; ; r++) {
+        let c = 0; while (c < cols && !free(r, c, 1)) c++;
+        if (c < cols) { take(r, c, 1); next[i] = { r, c, n: 1 }; break; }
+      }
     });
-    if (active < 0) anchors = pos.map(p => ({ r: p.r, c: p.c }));
+    pos = next;
     grid.classList.toggle("no-anim", !animate);
-    let rows = 0;
+    let rows = 0; slots = [];
     cards.forEach((el, i) => {
       const { r, c, n } = pos[i];
       rows = Math.max(rows, r + n);
-      el.style.transform = `translate(${c * (cw + gap)}px, ${r * (ch + gap)}px)`;
-      el.style.width = n * cw + (n - 1) * gap + "px";
-      el.style.height = n * ch + (n - 1) * gap + "px";
+      const x = c * (cw + gap), y = r * (ch + gap), w = n * cw + (n - 1) * gap, h = n * ch + (n - 1) * gap;
+      slots.push({ i, x, y, w, h });
+      el.style.transform = `translate(${x}px, ${y}px)`;
+      el.style.width = w + "px"; el.style.height = h + "px";
       el.classList.toggle("is-open", i === active);
     });
     grid.style.height = rows * ch + (rows - 1) * gap + "px";
     if (!animate) requestAnimationFrame(() => grid.classList.remove("no-anim"));
   }
-  const setActive = i => { if (i === active) return; active = i; layoutGrid(); };
-  cards.forEach((el, i) => {
-    el.addEventListener("pointerenter", e => { if (e.pointerType === "mouse") setActive(i); });
-    el.addEventListener("click", () => setActive(active === i ? -1 : i));   // touch: tap to open/close
+  function setActive(i) {
+    if (i === active) return;
+    const anchor = i >= 0 ? { r: pos[i].r, c: pos[i].c } : null;   // grow from where it is now
+    active = i;
+    layoutGrid(true, anchor);
+  }
+  function cardAt(e) {
+    const r = grid.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
+    const hit = slots.find(s => x >= s.x && x <= s.x + s.w && y >= s.y && y <= s.y + s.h);
+    return hit ? hit.i : null;                                       // null = in a gap between cards
+  }
+  grid.addEventListener("pointermove", e => {
+    if (e.pointerType !== "mouse") return;
+    const i = cardAt(e);
+    if (i !== null) setActive(i);
   });
   grid.addEventListener("pointerleave", e => { if (e.pointerType === "mouse") setActive(-1); });
+  let lastType = "mouse";
+  grid.addEventListener("pointerdown", e => { lastType = e.pointerType; });
+  grid.addEventListener("click", e => {                              // touch: tap to open / close
+    if (lastType === "mouse") return;
+    const i = cardAt(e); if (i !== null) setActive(active === i ? -1 : i);
+  });
 
   // decode every cover image up front so the first hover never waits on (or flashes) an image
-  grid.querySelectorAll(".cover img").forEach(img => { img.loading = "eager"; img.decode?.().catch(() => {}); });
+  grid.querySelectorAll(".work-cover img").forEach(img => { img.loading = "eager"; img.decode?.().catch(() => {}); });
 
   // ---------- start ----------
-  const start = () => { measure(); active = -1; layoutGrid(false); };
+  const start = () => { measure(); active = -1; pos = []; layoutGrid(false); };
   addEventListener("resize", () => { measure(); layoutGrid(false); });
   (document.fonts ? document.fonts.ready : Promise.resolve()).then(start);
   start();
