@@ -2,7 +2,7 @@
 
 :root { --board-pad: clamp(16px, 3vw, 40px); }
 
-body { transition: background-color var(--dur-slow) var(--ease-in-out); }
+body { transition: background-color var(--dur-slow) var(--ease-in-out); overflow-x: hidden; }
 body.is-home { background: var(--canvas); }
 
 /* ---- The name while the zipper opens (centred), before it docks into the title card ---- */
@@ -22,12 +22,44 @@ body.is-home .topbar { background: var(--canvas); }
 body.is-home .card { background: var(--surface); }
 
 .card--hero {
-  height: var(--hero-h, clamp(260px, 42vh, 420px));
+  height: var(--hero-h, clamp(230px, 29.4vh, 294px));
   padding: var(--card-pad); overflow: hidden; position: relative;
   display: grid; grid-template-columns: 1fr auto; grid-template-rows: auto 1fr auto;
-  grid-template-areas: "name nav" ". ." "intro meta"; column-gap: var(--space-5);
+  grid-template-areas: "name nav" "toggle ." "intro meta"; column-gap: var(--space-5);
 }
-.hero-nav { grid-area: nav; } .hero-intro { grid-area: intro; } .hero-meta { grid-area: meta; }
+.hero-nav { grid-area: nav; }
+body, .card, .topbar { transition: background-color var(--dur-slow) var(--ease-in-out), color var(--dur-slow) var(--ease-in-out); }
+
+/* ---- Objects / Interfaces toggle: a split-flap tile that drops its top leaf to flip ---- */
+.hero-toggle { grid-area: toggle; align-self: start; margin-top: var(--space-5); display: flex; align-items: center; gap: var(--space-3); }
+.flap {
+  --w: clamp(220px, 21vw, 280px); --h: 104px;
+  position: relative; width: var(--w); height: var(--h); padding: 0; border: 0; cursor: pointer;
+  background: none; perspective: 500px; border-radius: 10px; color: var(--surface);
+}
+.flap:focus-visible { outline: 2px solid var(--ink); outline-offset: 4px; }
+.flap-half {
+  position: absolute; left: 0; right: 0; height: 50%; overflow: hidden;
+  background: var(--ink); backface-visibility: hidden;
+  transition: background-color var(--dur-slow) var(--ease-in-out);
+}
+.flap-top    { top: 0;    border-radius: 10px 10px 0 0; }
+.flap-bottom { bottom: 0; border-radius: 0 0 10px 10px; }
+.flap-top::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 1px; background: rgba(0,0,0,.35); }
+.flap-content {
+  position: absolute; left: 0; right: 0; height: var(--h); top: 0;
+  display: grid; grid-template-rows: auto 1fr; padding: 12px 16px 14px; text-align: left;
+}
+.flap-bottom .flap-content { top: calc(var(--h) / -2); }
+.flap-caption { font: 400 var(--size-micro)/1 var(--font-text); letter-spacing: var(--tracking-label); text-transform: uppercase; opacity: .65; }
+.flap-word { display: flex; align-items: center; gap: 10px; font: 700 clamp(24px, 2.4vw, 34px)/1 var(--font-display); letter-spacing: .01em; white-space: nowrap; }
+.flap-word svg { width: 28px; height: 28px; flex: none; }
+.flap-leaf { position: absolute; left: 0; right: 0; top: 0; height: 50%; transform-origin: 50% 100%; transform-style: preserve-3d; z-index: 2; }
+.flap-leaf .flap-half { height: 100%; }
+.flap-leaf .leaf-back { transform: rotateX(180deg); border-radius: 0 0 10px 10px; }
+.flap-leaf .leaf-back .flap-content { top: calc(var(--h) / -2); }
+.flap-hint { font-size: var(--size-micro); }
+.hero-toggle { transition: opacity var(--dur-fast) linear; } .hero-intro { grid-area: intro; } .hero-meta { grid-area: meta; }
 
 /* Name block: the clip shortens the word right-to-left; the mark replaces the D at the end */
 .hero-name { grid-area: name; position: relative; transform-origin: 0 0; justify-self: start; visibility: hidden; }
@@ -40,16 +72,28 @@ body.is-docked .hero-name { visibility: visible; }
 /* ---- Work grid: 12 equal cards; the hovered one grows to 2 × 2 and the rest reflow ---- */
 .board {
   max-width: var(--page-max); margin: 0 auto;
-  padding: calc(var(--board-pad) + var(--hero-h0, 420px) + var(--card-gap)) var(--page-gutter) var(--space-9);
+  padding: calc(var(--board-pad) + var(--hero-h0, 294px) + var(--card-gap)) var(--page-gutter) var(--space-9);
 }
 .work-grid { position: relative; }
 .work-card {
-  position: absolute; top: 0; left: 0; padding: var(--card-pad); cursor: pointer;
-  transition: background-color var(--dur-base) ease,
-              transform .55s var(--ease-in-out), width .55s var(--ease-in-out), height .55s var(--ease-in-out);
+  position: absolute; top: 0; left: 0; cursor: pointer; perspective: 1400px;
+  transition: transform .55s var(--ease-in-out), width .55s var(--ease-in-out), height .55s var(--ease-in-out);
 }
+.work-card-inner {
+  position: absolute; inset: 0; transform-style: preserve-3d;
+  transition: transform .8s cubic-bezier(.5, 0, .25, 1);
+}
+.is-digital .work-card-inner { transform: rotateX(-180deg); }   /* top edge tips toward you and over */
+.face {
+  position: absolute; inset: 0; padding: var(--card-pad); border-radius: var(--radius-card);
+  backface-visibility: hidden; -webkit-backface-visibility: hidden;
+  background: transparent; transition: background-color var(--dur-base) ease;
+}
+body.is-home .face--front { background: var(--face-light); }
+body.is-home .face--back  { background: var(--face-dark); }
+.face--back { transform: rotateX(180deg); }
 .work-card.is-open { z-index: 1; }
-.work-grid.no-anim .work-card { transition: background-color var(--dur-base) ease; }
+.work-grid.no-anim .work-card { transition: none; }
 /* Cover: ink sketch by default, the marker rendering on hover/open. Both images sit in one
    white "paper" layer that is multiplied onto the card, so the white disappears into the card
    grey and the two images cross-fade exactly (same box, same fit, nothing re-laid out). */
@@ -69,8 +113,10 @@ body.is-home .work-cover { opacity: 1; }
 .card-meta { position: relative; display: flex; justify-content: space-between; font-size: var(--size-micro); color: var(--grey-500); }
 
 @media (max-width: 720px) {
-  .card--hero { grid-template-columns: 1fr; grid-template-areas: "name" "nav" "." "intro" "meta"; }
+  .card--hero { grid-template-columns: 1fr; grid-template-rows: auto auto 1fr auto auto;
+                grid-template-areas: "name" "toggle" "." "intro" "meta"; }
+  .hero-nav { display: none; }   /* nav moves elsewhere on phones once it has links */
 }
 @media (prefers-reduced-motion: reduce) {
-  .work-card { transition: background-color var(--dur-base) ease; }
+  .work-card, .work-card-inner { transition: none; }
 }

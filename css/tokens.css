@@ -21,6 +21,9 @@
   --bg:           var(--paper);
   --line:         var(--grey-300);
 
+  --face-light:   #f6f6f6;  /* front of a work card (Objects) */
+  --face-dark:    #1f1f1f;  /* back of a work card (Interfaces) */
+
   /* Zipper intro */
   --zip:          #1b1b1b;  /* zipper line and pull */
   --zip-cover:    var(--paper);
@@ -82,4 +85,14 @@
   --z-page:   1;
   --z-nav:    50;
   --z-intro:  100;
+}
+
+/* Interfaces mode: the page turns black with greys (set on <html data-mode="digital">) */
+[data-mode="digital"] {
+  --ink:        #eeeeee;
+  --canvas:     #0f0f0f;
+  --surface:    #1b1b1b;
+  --grey-700:   #a3a3a3;
+  --grey-500:   #7a7a7a;
+  --grey-300:   #333333;
 }
