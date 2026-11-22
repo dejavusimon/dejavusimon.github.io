@@ -317,3 +317,5 @@ body.is-collapsed .hero-toggle, body.is-collapsed .hero-social a { pointer-event
 .face--back { display: none !important; }
 body:not(.is-home) .hero-toggle, body:not(.is-home) .hero-intro { visibility: hidden; }
 .hero-toggle, .hero-social { grid-area: auto; }
+/* desktop: the open intro sits on the card's bottom edge, with the same margin as on the left */
+@media (min-width: 721px) { .hero-intro { top: auto; bottom: var(--card-pad); } }
