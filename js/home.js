@@ -130,6 +130,9 @@
   });
   grid.addEventListener("pointerleave", e => { if (e.pointerType === "mouse") setActive(-1); });
 
+  // decode every cover image up front so the first hover never waits on (or flashes) an image
+  grid.querySelectorAll(".cover img").forEach(img => { img.loading = "eager"; img.decode?.().catch(() => {}); });
+
   // ---------- start ----------
   const start = () => { measure(); active = -1; layoutGrid(false); };
   addEventListener("resize", () => { measure(); layoutGrid(false); });

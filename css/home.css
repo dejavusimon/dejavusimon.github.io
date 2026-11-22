@@ -50,7 +50,23 @@ body.is-docked .hero-name { visibility: visible; }
 }
 .work-card.is-open { z-index: 1; }
 .work-grid.no-anim .work-card { transition: background-color var(--dur-base) ease; }
-.card-meta { display: flex; justify-content: space-between; font-size: var(--size-micro); color: var(--grey-500); }
+/* Cover: ink sketch by default, the marker rendering on hover/open. Both images sit in one
+   white "paper" layer that is multiplied onto the card, so the white disappears into the card
+   grey and the two images cross-fade exactly (same box, same fit, nothing re-laid out). */
+.cover {
+  position: absolute; inset: var(--card-pad); margin: 0;
+  background: #fff; mix-blend-mode: multiply; isolation: isolate;
+  opacity: 0; transition: opacity var(--dur-base) ease;
+}
+body.is-home .cover { opacity: 1; }
+.cover img {
+  position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain;
+  transition: opacity .6s var(--ease-in-out); will-change: opacity; backface-visibility: hidden;
+}
+.cover-marker { opacity: 0; }
+.work-card.is-open .cover-marker { opacity: 1; }
+.work-card.is-open .cover-sketch { opacity: 0; }
+.card-meta { position: relative; display: flex; justify-content: space-between; font-size: var(--size-micro); color: var(--grey-500); }
 
 @media (max-width: 720px) {
   .card--hero { grid-template-columns: 1fr; grid-template-areas: "name" "nav" "." "intro" "meta"; }
