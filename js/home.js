@@ -19,8 +19,14 @@
   const mark = block.querySelector(".name-mark");
   const stageName = document.querySelector(".name-stage .t-display");
 
-  const toggleWrap = document.querySelector(".hero-toggle");
+  const bar = document.querySelector(".topbar-inner");
   let m = {};   // measurements
+  function cardHeight() {
+    const g = document.querySelector(".work-grid");
+    const gap = parseFloat(getComputedStyle(root).getPropertyValue("--card-gap")) || 12;
+    const W = g.clientWidth, cols = W >= 720 ? 3 : 2;
+    return Math.round(Math.max(150, ((W - gap * (cols - 1)) / cols) * 0.72));
+  }
   function measure() {
     const cs = getComputedStyle(name), size = parseFloat(cs.fontSize);
     const ctx = document.createElement("canvas").getContext("2d");
@@ -40,7 +46,7 @@
       cap, pad,
       fullW: clip.scrollWidth,
       dW: D.actualBoundingBoxRight - bearing + 1,                   // just the D
-      h0: Math.min(294, Math.max(230, innerHeight * 0.294)),   // 30% shorter than before
+      h0: cardHeight(),                                        // title row = one work card tall
       sMin: 0.72,
     };
     m.hMin = Math.round(pad * 2 + cap * m.sMin);
@@ -56,16 +62,13 @@
   // ride up with it. When scrolling stops partway, the page itself glides on: past 50% to the
   // slim logo bar, under 50% back to the full card. Nothing rests half-collapsed.
   function apply(c) {
-    hero.style.setProperty("--hero-h", lerp(m.h0, m.hMin, c) + "px");
+    bar.style.setProperty("--hero-h", lerp(m.h0, m.hMin, c) + "px");
     const a = ease(clamp(c / 0.75));                 // shorten + shrink
     const b = ease(clamp((c - 0.7) / 0.3));          // D → mark
     clip.style.width = lerp(m.fullW, m.dW, a) + "px";
     block.style.transform = `scale(${lerp(1, m.sMin, a)})`;
     name.style.opacity = 1 - b;
     mark.style.opacity = b;
-    const t = clamp(1 - c * 3);                     // toggle fades out early in the collapse
-    toggleWrap.style.opacity = t;
-    toggleWrap.style.pointerEvents = t < 0.5 ? "none" : "";
   }
   let snapTimer;
   function collapse() {
@@ -179,11 +182,11 @@
     cursor: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M5 3.5 19 11l-6.2 1.6L9.6 18.8Z"/><path d="m12.8 12.6 4.6 6.4"/></svg>',
   };
   const MODES = [
-    { key: "physical", caption: "Physical products", word: "Objects", icon: ICON.cube },
-    { key: "digital", caption: "Digital products", word: "Interfaces", icon: ICON.cursor },
+    { key: "physical", word: "Objects", icon: ICON.cube },
+    { key: "digital", word: "Interfaces", icon: ICON.cursor },
   ];
   const flap = document.querySelector(".flap");
-  const face = mo => `<span class="flap-content"><span class="flap-caption">${mo.caption}</span><span class="flap-word">${mo.icon}${mo.word}</span></span>`;
+  const face = mo => `<span class="flap-content"><span class="flap-word">${mo.icon}${mo.word}</span></span>`;
   let mode = 0, flipping = false;
   function renderFlap(cur, next = cur) {
     flap.innerHTML = `
