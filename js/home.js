@@ -44,6 +44,17 @@
     // the top row is exactly as wide as the grid below, so the flap's edge always lines up
     bar.style.maxWidth = "none";
     bar.style.width = document.querySelector(".work-grid").clientWidth + "px";
+    // on narrow screens the name shrinks until the whole word fits inside the title card
+    name.style.fontSize = "";
+    {
+      const gap = parseFloat(getComputedStyle(root).getPropertyValue("--card-gap")) || 12;
+      const padX = parseFloat(getComputedStyle(hero).paddingLeft);
+      const avail = document.querySelector(".work-grid").clientWidth - flapWidth() - gap - padX * 2;
+      const ctx = document.createElement("canvas").getContext("2d"), cs = getComputedStyle(name);
+      ctx.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+      const w = ctx.measureText(name.textContent.trim()).width;
+      if (w > avail) name.style.fontSize = parseFloat(cs.fontSize) * avail / w * 0.98 + "px";
+    }
     const cs = getComputedStyle(name), size = parseFloat(cs.fontSize);
     const ctx = document.createElement("canvas").getContext("2d");
     ctx.font = `${cs.fontWeight} ${size}px ${cs.fontFamily}`;
@@ -208,8 +219,9 @@
   // pointer, everything returns to the small grid. A short grace period lets the pointer
   // cross a gap into the next card without the whole grid closing and reopening.
   let pointer = null, closeTimer;
+  const canHover = matchMedia("(hover: hover) and (pointer: fine)");
   function track() {
-    if (!pointer || framesMode()) return;
+    if (!pointer || framesMode() || !canHover.matches) return;
     const overBar = document.elementFromPoint(pointer.clientX, pointer.clientY)?.closest(".topbar");
     const i = overBar ? null : cardAt(pointer);
     clearTimeout(closeTimer);
@@ -224,12 +236,7 @@
   const release = () => { pointer = null; clearTimeout(closeTimer); setActive(-1); };
   document.documentElement.addEventListener("pointerleave", release);
   addEventListener("blur", release);
-  let lastType = "mouse";
-  grid.addEventListener("pointerdown", e => { lastType = e.pointerType; });
-  grid.addEventListener("click", e => {                              // touch: tap to open / close
-    if (lastType === "mouse" || framesMode()) return;
-    const i = cardAt(e); if (i !== null) setActive(active === i ? -1 : i);
-  });
+  // touchscreens: cards never expand (no hover there, and tapping should open the project later)
 
   // decode every cover image up front so the first hover never waits on (or flashes) an image
   grid.querySelectorAll(".work-cover img, .frame-photo").forEach(img => { img.loading = "eager"; img.decode?.().catch(() => {}); });
@@ -325,7 +332,10 @@
   const start = () => { measure(); active = -1; pos = []; layoutGrid(false); };
   addEventListener("resize", () => { measure(); layoutGrid(false); });
   let lastW = 0;
-  new ResizeObserver(() => { if (grid.clientWidth !== lastW) { lastW = grid.clientWidth; measure(); layoutGrid(false); } }).observe(grid);
+  // re-measure on the next frame, not inside the observer (changing layout there loops)
+  new ResizeObserver(() => requestAnimationFrame(() => {
+    if (grid.clientWidth !== lastW) { lastW = grid.clientWidth; measure(); layoutGrid(false); }
+  })).observe(grid);
   (document.fonts ? document.fonts.ready : Promise.resolve()).then(start);
   start();
 
