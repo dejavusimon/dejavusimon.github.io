@@ -34,12 +34,10 @@
     const W = g.clientWidth, cols = W >= 720 ? 3 : 2;
     return Math.round(Math.max(150, ((W - gap * (cols - 1)) / cols) * 0.72));
   }
-  // the tallest the title card's content needs: padding + name + gap + intro text
-  function heroContent() {
-    const pad = parseFloat(getComputedStyle(hero).paddingTop);
-    const cap = parseFloat(getComputedStyle(name).fontSize) * 0.72;
-    return pad * 2 + cap + 16 + intro.offsetHeight;
-  }
+  // ---- intro behind a plus: closed / open heights, and where the plus/cross sits ----
+  const toggle = hero.querySelector(".hero-toggle");
+  let open = false, openE = 0;                                     // openE: 0 closed → 1 open (animated)
+  const phone = () => document.querySelector(".work-grid").clientWidth < 720;
   function measure() {
     // the top row is exactly as wide as the grid below, so the flap's edge always lines up
     bar.style.maxWidth = "none";
@@ -49,7 +47,8 @@
     {
       const gap = parseFloat(getComputedStyle(root).getPropertyValue("--card-gap")) || 12;
       const padX = parseFloat(getComputedStyle(hero).paddingLeft);
-      const avail = document.querySelector(".work-grid").clientWidth - flapWidth() - gap - padX * 2;
+      const avail = document.querySelector(".work-grid").clientWidth - flapWidth() - gap - padX * 2
+                    - (phone() ? 34 : 0);                         // phones: room for the cross beside the name
       const ctx = document.createElement("canvas").getContext("2d"), cs = getComputedStyle(name);
       ctx.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
       const w = ctx.measureText(name.textContent.trim()).width;
@@ -73,17 +72,66 @@
       cap, pad,
       fullW: clip.scrollWidth,
       dW: D.actualBoundingBoxRight - bearing + 1,                   // just the D
-      h0: Math.round(Math.max(cardHeight() * 0.7, heroContent())),  // title row: 70% of a work card
+      h0: 0,
       flapW: flapWidth(),
       sMin: 0.72,
     };
     m.hMin = Math.round(pad * 2 + cap * m.sMin);
+    // intro: under the name, as wide as one work card (desktop) or the whole card (phones)
+    const gW = document.querySelector(".work-grid").clientWidth;
+    const gap = parseFloat(getComputedStyle(root).getPropertyValue("--card-gap")) || 12;
+    const heroW = gW - m.flapW - gap, inner = heroW - pad * 2;
+    const ph = phone();
+    const introTop = pad + cap + (ph ? 12 : 20);
+    hero.style.setProperty("--intro-top", introTop + "px");
+    hero.style.setProperty("--intro-w", (ph ? inner : Math.min(inner - 200, (gW - gap * 2) / 3 - pad)) + "px");
+    const introH = intro.offsetHeight;
+    if (ph) {
+      const before = Math.max(cardHeight() * 0.7, pad * 2 + cap + 16 + introH);   // the old phone card
+      m.hBase = Math.round(Math.max(before * 0.5, pad * 2 + cap + 12 + 28));
+      m.hOpen = Math.round(introTop + introH + 14 + 34 + pad - 6);
+    } else {
+      m.hBase = Math.round(cardHeight() * 0.7);
+      m.hOpen = Math.round(Math.max(m.hBase, introTop + introH + pad + 4));
+    }
+    m.h0 = lerp(m.hBase, m.hOpen, ease(openE));
+    m.inner = inner; m.ph = ph;
+    placeToggle();
     // the mark: same height as the capitals, its left edge on the D's left edge
     mark.style.height = cap + "px";
     mark.style.width = cap * (168.425 / 138.422) + "px";
     root.style.setProperty("--hero-h0", m.h0 + "px");
     collapse();
   }
+  function placeToggle() {
+    const s = m.ph ? 28 : 36;
+    hero.style.setProperty("--tog-x", (open ? m.inner - s : 0) + "px");
+    if (m.ph) hero.style.setProperty("--tog-top", (open ? m.pad + m.cap / 2 - s / 2 : m.pad + m.cap + 12) + "px");
+    else hero.style.removeProperty("--tog-top");
+  }
+  let openAnim = 0;
+  function setOpen(v) {
+    if (v === open) return;
+    open = v;
+    hero.classList.toggle("is-open", open);
+    toggle.setAttribute("aria-expanded", open);
+    toggle.setAttribute("aria-label", open ? "Close" : "About Simon");
+    placeToggle();
+    if (scrollY > 0) scrollTo({ top: 0, behavior: reduce ? "auto" : "smooth" });
+    const from = openE, to = open ? 1 : 0, t0 = performance.now(), dur = reduce ? 1 : 600, id = ++openAnim;
+    const step = now => {
+      if (id !== openAnim) return;
+      const t = clamp((now - t0) / dur);
+      openE = from + (to - from) * t;
+      m.h0 = lerp(m.hBase, m.hOpen, ease(openE));
+      root.style.setProperty("--hero-h0", m.h0 + "px");
+      collapse();
+      if (t < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }
+  toggle.addEventListener("click", () => setOpen(!open));
+  addEventListener("keydown", e => { if (e.key === "Escape" && open) setOpen(false); });
 
   // ---------- 2. collapse on scroll ----------
   // The title card shrinks exactly as fast as the page scrolls, so the cards below always
@@ -99,7 +147,7 @@
     block.style.transform = `scale(${lerp(1, m.sMin, a)})`;
     name.style.opacity = 1 - b;
     mark.style.opacity = b;
-    intro.style.opacity = clamp(1 - c * 3) * 0.78;
+    body.classList.toggle("is-collapsed", c > 0.3);
   }
   let snapTimer;
   function collapse() {
@@ -145,14 +193,14 @@
   const POP = "cubic-bezier(.2, .8, .25, 1)";
   function reveal() {
     if (reduce) return;
-    const rise = (el, delay, dur = 520, opts = {}) => el.animate(
+    const rise = (el, delay, dur = 520, opts = {}) => { try { return el.animate(
       [{ opacity: 0, transform: "translateY(18px) scale(.94)" }, { opacity: 1, transform: "none" }],
-      { duration: dur, delay, easing: POP, fill: "backwards", ...opts });
+      { duration: dur, delay, easing: POP, fill: "backwards", ...opts }); } catch (e) { return { finished: Promise.resolve() }; } };
     const anims = [
-      rise(hero, 750, 520, { pseudoElement: "::before" }),
-      intro.animate([{ opacity: 0 }, { opacity: getComputedStyle(intro).opacity }],
-                    { duration: 450, delay: 1000, easing: "ease-out", fill: "backwards" }),
+      rise(hero.querySelector(".hero-bg"), 750, 520),
       rise(flap, 850),
+      (() => { try { return toggle.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 400, delay: 1000, fill: "backwards" }); }
+               catch (e) { return { finished: Promise.resolve() }; } })(),
     ];
     // work cards: one wave per diagonal, measured from the title card in the top-left
     const maxD = Math.max(...pos.map(q => q.r + q.c)) || 1;
@@ -209,8 +257,8 @@
   function layoutGrid(animate = true, anchor) {
     const gap = parseFloat(getComputedStyle(root).getPropertyValue("--card-gap")) || 12;
     const W = grid.clientWidth;
-    cols = W >= 720 ? 3 : 2;
     const frames = body.classList.contains("is-frames");
+    cols = W >= 720 ? 3 : frames ? 2 : 1;
     const cw = (W - gap * (cols - 1)) / cols, ch = frames ? cw * 4 / 3 : cw * 0.72;   // photos are 3:4
     const occ = [];
     const free = (r, c, n) => { for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) if (c + j >= cols || (occ[r + i] && occ[r + i][c + j])) return false; return true; };
@@ -337,7 +385,7 @@
   ];
   const flap = document.querySelector(".flap");
   const face = mo => `<span class="flap-content"><span class="flap-word">${mo.icon}<span class="flap-label">${mo.word}</span></span></span>`;
-  let mode = 0, flips = 0, flipping = false;
+  let mode = 0, flipping = false, targetPanel = "objects";
   function renderFlap(cur, next = cur) {
     flap.innerHTML = `
       <span class="flap-half flap-top">${face(MODES[next])}</span>
@@ -359,20 +407,24 @@
     const next = (mode + 1) % MODES.length;
     renderFlap(mode, next);
     const leaf = flap.querySelector(".flap-leaf");
-    // cards: load the hidden face with the next side, then tip every card over
-    const hidden = flips % 2 === 0 ? ".face--back" : ".face--front";
-    cards.forEach(el => { el.querySelector(hidden).dataset.show = MODES[next].panel; });
-    flips++;
-    grid.classList.add("is-flipping");
+    // cards: each one tips forward until it is edge-on, its side is swapped while it can't be
+    // seen, and it tips back down. Only one face exists, so the old side can never show through.
+    const P = "perspective(1400px) ";
+    targetPanel = MODES[next].panel;
     cardOrder().forEach((el, k) => {
-      const inner = el.querySelector(".work-card-inner");
-      inner.style.transitionDelay = (reduce ? 0 : k * 55) + "ms";
-      inner.style.transform = `rotateX(${-180 * flips}deg)`;
+      const inner = el.querySelector(".work-card-inner"), front = el.querySelector(".face--front");
+      if (reduce) { front.dataset.show = MODES[next].panel; return; }
+      inner.animate([{ transform: P + "rotateX(0deg)" }, { transform: P + "rotateX(-90deg)" }],
+                    { duration: 340, delay: k * 55, easing: "cubic-bezier(.55, 0, .85, .35)", fill: "both" })
+        .finished.then(a => {
+          front.dataset.show = targetPanel;                        // the latest choice, even mid-run
+          inner.animate([{ transform: P + "rotateX(90deg)" }, { transform: P + "rotateX(0deg)" }],
+                        { duration: 440, easing: "cubic-bezier(.15, .65, .35, 1)" });
+          a.cancel();
+        });
     });
     setPageMode(next);
     resetMaps();
-    clearTimeout(settleTimer);
-    settleTimer = setTimeout(() => settleCards(MODES[next].panel), (reduce ? 0 : cards.length * 55) + 850);
     if (next === 2) active = -1;                                     // collapse any open card entering Frames
     layoutGrid(true);
     const label = `Showing ${MODES[next].word.toLowerCase()}. Flip to show ${MODES[(next + 1) % 3].word.toLowerCase()}`;
@@ -388,20 +440,6 @@
   // After a flip, every card rests at a whole number of half-turns. Put each one back to 0deg
   // with the showing side on its front face, so the browser drops the 3D layers; leftover
   // turned layers are what made rows of photos render cut off.
-  let settleTimer;
-  function settleCards(panel) {
-    if (flipping) return (settleTimer = setTimeout(() => settleCards(panel), 100));
-    cards.forEach(el => {
-      const inner = el.querySelector(".work-card-inner");
-      inner.style.transition = "none"; inner.style.transitionDelay = "0ms"; inner.style.transform = "none";
-      el.querySelector(".face--front").dataset.show = panel;
-      el.querySelector(".face--back").dataset.show = panel;
-    });
-    flips = 0;
-    grid.classList.remove("is-flipping");
-    void grid.offsetHeight;                                           // commit before restoring transitions
-    cards.forEach(el => { el.querySelector(".work-card-inner").style.transition = ""; });
-  }
   // cards flip in reading order: top-left first, across then down
   const cardOrder = () => [...cards].sort((a, b) => {
     const ra = a.getBoundingClientRect(), rb = b.getBoundingClientRect();
