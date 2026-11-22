@@ -51,9 +51,9 @@
   }
 
   // ---------- 2. collapse on scroll ----------
-  // Follows the scroll for the first half; past 50% it finishes on its own to the logo bar,
-  // so the card never rests in a half-collapsed state.
-  let shown = 0, goal = 0, raf = 0;
+  // The title card shrinks exactly as fast as the page scrolls, so the cards below always
+  // ride up with it. When scrolling stops partway, the page itself glides on: past 50% to the
+  // slim logo bar, under 50% back to the full card. Nothing rests half-collapsed.
   function apply(c) {
     hero.style.setProperty("--hero-h", lerp(m.h0, m.hMin, c) + "px");
     const a = ease(clamp(c / 0.75));                 // shorten + shrink
@@ -63,17 +63,17 @@
     name.style.opacity = 1 - b;
     mark.style.opacity = b;
   }
-  function step() {
-    shown += (goal - shown) * (reduce ? 1 : 0.16);
-    if (Math.abs(goal - shown) < 0.002) shown = goal;
-    apply(shown);
-    raf = shown === goal ? 0 : requestAnimationFrame(step);
-  }
+  let snapTimer;
   function collapse() {
     if (!m.h0) return;
-    const s = clamp(scrollY / (m.h0 - m.hMin));
-    goal = s < 0.5 ? s : 1;
-    if (!raf) raf = requestAnimationFrame(step);
+    const d = m.h0 - m.hMin;
+    apply(clamp(scrollY / d));
+    clearTimeout(snapTimer);
+    snapTimer = setTimeout(() => {
+      const s = scrollY / d;
+      if (s > 0.002 && s < 0.998 && !body.classList.contains("intro-active"))
+        scrollTo({ top: s >= 0.5 ? d : 0, behavior: reduce ? "auto" : "smooth" });
+    }, 140);
   }
   addEventListener("scroll", collapse, { passive: true });
 
