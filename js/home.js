@@ -135,6 +135,29 @@
     requestAnimationFrame(step);
   }
   toggle.addEventListener("click", () => setOpen(!open));
+  // desktop: the email icon copies the address and says so; phones keep the mail app link
+  const mail = hero.querySelector('.hero-social a[href^="mailto:"]');
+  let toastEl, toastTimer;
+  function toast(msg) {
+    if (!toastEl) { toastEl = document.createElement("div"); toastEl.className = "toast"; toastEl.setAttribute("role", "status"); document.body.appendChild(toastEl); }
+    toastEl.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg><span></span>';
+    toastEl.querySelector("span").textContent = msg;
+    requestAnimationFrame(() => toastEl.classList.add("show"));
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => toastEl.classList.remove("show"), 2400);
+  }
+  mail.addEventListener("click", async e => {
+    if (!matchMedia("(hover: hover) and (pointer: fine)").matches) return;
+    const addr = mail.getAttribute("href").replace("mailto:", "");
+    e.preventDefault();
+    try { await navigator.clipboard.writeText(addr); }
+    catch (err) {                                                   // older browsers: copy through a hidden field
+      const t = document.createElement("textarea"); t.value = addr; t.style.position = "fixed"; t.style.opacity = "0";
+      document.body.appendChild(t); t.select();
+      const ok = document.execCommand("copy"); t.remove();
+      if (!ok) { location.href = "mailto:" + addr; return; }
+    }
+    toast(`Email copied: ${addr}`);
+  });
   addEventListener("keydown", e => { if (e.key === "Escape" && open) setOpen(false); });
 
   // ---------- 2. collapse on scroll ----------
