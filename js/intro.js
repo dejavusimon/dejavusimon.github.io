@@ -1,15 +1,17 @@
 /* Zipper intro.
-   The logo, turned vertical, is the zipper pull. Scroll, drag or swipe down to
-   unzip; past 70% it finishes by itself. Left halfway and idle for 2 s, it
-   slides back to the top. Plays on every visit. */
+   The logo, turned vertical, is the zipper pull; pull and rails share one colour (--zip).
+   Geometry comes from Web_Dev_Sketch_1/2.svg: two rails as wide as the wave, with the
+   wave's ends cut flat to the rail width so rail → pull → rail joins without a seam.
+   Scroll, drag or swipe down to unzip; past 70% it finishes by itself. Left partway
+   and idle for 2 s, it slides back to the top. Plays on every visit. */
 (() => {
   const NS = "http://www.w3.org/2000/svg";
   const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
   const COVER = css("--zip-cover") || css("--paper") || "#fefefe", ZIP = css("--zip") || "#1b1b1b";
 
-  // Logo turned vertical, in its own units (557 wide x 697 tall): wave on the left, bar on the right
-  const LW = 557, LH = 697, WAVE = [46, 242], BAR = [340, 557];
-  const LOGO = `<path d="M0 47 C50 81 100 93 152 93 C262 93 404 0 545 0 C600 0 650 15 697 46 L697 241 C650 210 600 195 545 195 C404 195 262 288 152 288 C100 288 50 276 0 242 Z"/><rect x="0" y="340" width="697" height="217"/>`;
+  // Pull geometry in sketch units: left rail x 0–27.94, gap, right rail x 41.62–69.56, height 92.73
+  const PW = 69.56, PH = 92.733, RAIL = 27.937, CL = 13.97, CR = 55.59;
+  const WAVE = "M27.9 0C4.84 32.249 50.96 60.485 27.9 92.734L0 92.734C23.064 60.485 -23.056 32.249 0 0Z";
 
   const svg = document.createElementNS(NS, "svg");
   svg.setAttribute("class", "intro");
@@ -23,58 +25,59 @@
       </mask>
     </defs>
     <rect class="cover" x="0" y="0" fill="${COVER}" mask="url(#zipMask)"/>
-    <path class="rail rail-l" fill="none" stroke="${ZIP}"/>
-    <path class="rail rail-r" fill="none" stroke="${ZIP}"/>
+    <g fill="none" stroke="${ZIP}" stroke-linecap="butt" stroke-linejoin="round">
+      <path class="rail rail-l"/>
+      <path class="rail rail-r"/>
+    </g>
     <g class="pull">
       <rect class="hit" fill="transparent"/>
-      <g class="logo" fill="${ZIP}">${LOGO}</g>
+      <path class="wave" fill="${ZIP}" d="${WAVE}"/>
     </g>`;
   document.body.prepend(svg);
   document.body.classList.add("intro-active");
 
   const q = s => svg.querySelector(s);
   const cover = q(".cover"), all = q(".m-all"), hole = q(".m-hole"),
-        railL = q(".rail-l"), railR = q(".rail-r"), logo = q(".logo"), hit = q(".hit");
+        railL = q(".rail-l"), railR = q(".rail-r"), wave = q(".wave"), hit = q(".hit");
 
-  let W, H, cx, S, k, ox, wL, wR, xL, xR;
+  let W, H, cx, S, k, ox, w, xL, xR;
   function layout() {
     W = innerWidth; H = innerHeight; cx = W / 2;
-    S = Math.round(Math.min(64, Math.max(40, H * 0.07)));    // pull height, px
-    k = S / LH; ox = cx - (LW * k) / 2;
-    wL = (WAVE[1] - WAVE[0]) * k; wR = (BAR[1] - BAR[0]) * k;
-    xL = ox + (WAVE[0] + WAVE[1]) / 2 * k; xR = ox + (BAR[0] + BAR[1]) / 2 * k;
+    S = Math.round(Math.min(64, Math.max(40, H * 0.06)));   // pull height, px
+    k = S / PH; ox = cx - (PW * k) / 2;
+    w = RAIL * k; xL = ox + CL * k; xR = ox + CR * k;
     for (const r of [cover, all]) { r.setAttribute("width", W); r.setAttribute("height", H); }
-    railL.setAttribute("stroke-width", wL); railR.setAttribute("stroke-width", wR);
+    railL.setAttribute("stroke-width", w); railR.setAttribute("stroke-width", w);
     hit.setAttribute("x", ox - 24); hit.setAttribute("y", -12);
-    hit.setAttribute("width", LW * k + 48); hit.setAttribute("height", S + 24);
+    hit.setAttribute("width", PW * k + 48); hit.setAttribute("height", S + 24);
   }
 
   const easeOut = t => 1 - Math.pow(1 - Math.min(1, Math.max(0, t)), 3);
-  // One side of the opening: leaves the pull straight up, then sweeps out and
-  // crosses the top edge at an angle (so the cover never forms a notch there).
-  const side = (x0, xe, top, lift) =>
-    `C${x0} ${top - lift * 0.55} ${xe + (x0 - xe) * 0.5} ${lift * 0.1} ${xe} ${-lift * 0.15}`;
 
   let p = 0, target = 0, extra = 0, finishing = false, touched = false, dragging = false;
   let lastInput = 0, hintStart = performance.now();
 
   function draw() {
-    const top = p * (H - S), bot = top + S - 1, lift = Math.max(8, top);
-    const spread = Math.min(cx * 0.95 * easeOut(p / 0.5), lift * 0.9 + 4) + extra * W;
-    const xeL = xL - spread, xeR = xR + spread;
+    const top = p * (H - S), bot = top + S;
     const open = top > 0.5;
+    const yEnd = -0.0105 * H;                                   // curves run just above the top edge (sketch 2)
+    const lift = Math.max(8, top);
+    const spread = Math.min(cx * easeOut(p / 0.5), lift * 1.1 + 4) + extra * W;
+    const xeL = xL - spread, xeR = xR + spread;
+    // leaves the pull exactly vertical, then sweeps out to the top corner (sketch 2)
+    const c1y = top - (top - yEnd) * 0.3;
+    const curve = (x0, xe) => `C${x0} ${c1y} ${x0} ${yEnd} ${xe} ${yEnd}`;
+    const seam = 0.75;                                          // rails tuck under the pull by <1px: no hairline
 
-    // opening: from the top of the pull, out along the two curves
     hole.setAttribute("d", open
-      ? `M${xL} ${top} ${side(xL, xeL, top, lift)} L${xeR} ${-lift * 0.15}
-         C${xeR + (xR - xeR) * 0.5} ${lift * 0.1} ${xR} ${top - lift * 0.55} ${xR} ${top} Z`
+      ? `M${xL} ${top} ${curve(xL, xeL)} L${xeR} ${yEnd} C${xR} ${yEnd} ${xR} ${c1y} ${xR} ${top} Z`
       : "");
-    // grey rails: curved above the pull (edging the cover), straight below it
-    const up = (x0, xe) => open ? `M${x0} ${top + 0.5} L${x0} ${top} ${side(x0, xe, top, lift)} ` : "";
-    railL.setAttribute("d", up(xL, xeL) + `M${xL} ${bot - 1} L${xL} ${H + 2}`);
-    railR.setAttribute("d", up(xR, xeR) + `M${xR} ${bot - 1} L${xR} ${H + 2}`);
-
-    logo.setAttribute("transform", `translate(${ox} ${top}) scale(${k}) matrix(0 -1 1 0 0 ${LH})`);
+    // left rail: curve above the pull, the wave (filled) through it, straight below
+    railL.setAttribute("d", (open ? `M${xL} ${top + seam} L${xL} ${top} ${curve(xL, xeL)} ` : "") +
+                            `M${xL} ${bot - seam} L${xL} ${H + 2}`);
+    // right rail: one unbroken stroke, since the logo's bar is the rail itself
+    railR.setAttribute("d", `M${xR} ${H + 2} L${xR} ${open ? top : -2}` + (open ? ` ${curve(xR, xeR)}` : ""));
+    wave.setAttribute("transform", `translate(${ox} ${top}) scale(${k})`);
     hit.setAttribute("transform", `translate(0 ${top})`);
   }
 
@@ -110,8 +113,8 @@
     setTimeout(() => {
       svg.classList.add("is-done");
       document.dispatchEvent(new CustomEvent("intro:done"));   // page takes over (name docks, cards appear)
-    }, 350);
-    setTimeout(() => { svg.remove(); document.body.classList.remove("intro-active"); }, 1100);
+    }, 250);
+    setTimeout(() => { svg.remove(); document.body.classList.remove("intro-active"); scrollTo(0, 0); }, 1000);
   }
 
   let wheelTimer;

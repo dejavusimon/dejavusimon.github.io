@@ -1,49 +1,59 @@
-/* Home: a top card with the name, then a grid of work cards (content to come). */
+/* Home: a fixed title card that collapses to the logo on scroll, over a 3 × 4 grid of work cards. */
+
+:root { --board-pad: clamp(16px, 3vw, 40px); }
 
 body { transition: background-color var(--dur-slow) var(--ease-in-out); }
 body.is-home { background: var(--canvas); }
 
-/* The name: centred while the zipper opens, then docked in the top card */
+/* ---- The name while the zipper opens (centred), before it docks into the title card ---- */
 .name-stage { position: fixed; inset: 0; display: grid; place-items: center; pointer-events: none; z-index: var(--z-page); }
 .name-stage .t-display { white-space: nowrap; }
-.name-docked { transform-origin: top left; white-space: nowrap; }
 
+/* ---- Title card: fixed at the top, shrinks as the page scrolls ---- */
+.topbar {
+  position: fixed; top: 0; left: 0; right: 0; z-index: var(--z-nav);
+  padding: var(--board-pad) var(--page-gutter) var(--card-gap);
+  background: transparent; transition: background-color var(--dur-slow) var(--ease-in-out);
+}
+body.is-home .topbar { background: var(--canvas); }
+.topbar-inner { max-width: var(--page-max); margin: 0 auto; }
+
+.card { background: transparent; border-radius: var(--radius-card); transition: background-color var(--dur-base) ease; }
+body.is-home .card { background: var(--surface); }
+
+.card--hero {
+  height: var(--hero-h, clamp(260px, 42vh, 420px));
+  padding: var(--card-pad); overflow: hidden; position: relative;
+  display: grid; grid-template-columns: 1fr auto; grid-template-rows: auto 1fr auto;
+  grid-template-areas: "name nav" ". ." "intro meta"; column-gap: var(--space-5);
+}
+.hero-nav { grid-area: nav; } .hero-intro { grid-area: intro; } .hero-meta { grid-area: meta; }
+
+/* Name block: the clip shortens the word right-to-left; the mark replaces the D at the end */
+.hero-name { grid-area: name; position: relative; transform-origin: 0 0; justify-self: start; visibility: hidden; }
+body.is-docked .hero-name { visibility: visible; }
+.name-clip { display: block; overflow: hidden; }
+.hero-name .t-name { display: block; white-space: nowrap; transform-origin: 0 0; }
+.name-mark { position: absolute; left: 0; top: 0; color: var(--ink); opacity: 0; pointer-events: none; }
+
+/* ---- Work grid: 12 equal cards; the hovered one grows to 2 × 2 and the rest reflow ---- */
 .board {
   max-width: var(--page-max); margin: 0 auto;
-  padding: clamp(16px, 4vw, 48px) var(--page-gutter);
-  display: grid; gap: var(--card-gap);
+  padding: calc(var(--board-pad) + var(--hero-h0, 420px) + var(--card-gap)) var(--page-gutter) var(--space-9);
 }
-
-/* Cards surface after the zipper: only their fill fades in, so the docking name never fades */
-.card {
-  background: transparent; border-radius: var(--radius-card); padding: var(--card-pad); position: relative;
-  transition: background-color var(--dur-base) ease;
+.work-grid { position: relative; }
+.work-card {
+  position: absolute; top: 0; left: 0; padding: var(--card-pad); cursor: pointer;
+  transition: background-color var(--dur-base) ease,
+              transform .55s var(--ease-in-out), width .55s var(--ease-in-out), height .55s var(--ease-in-out);
 }
-body.is-home .card { background: var(--surface); }
-body.is-home .work-grid .card:nth-child(1) { transition-delay: .15s; }
-body.is-home .work-grid .card:nth-child(2) { transition-delay: .25s; }
-body.is-home .work-grid .card:nth-child(3) { transition-delay: .35s; }
-
-/* Top card: name top-left, nav top-right, intro line bottom-left, clock bottom-right */
-.card--hero {
-  min-height: clamp(260px, 42vh, 420px);
-  display: grid; grid-template-columns: 1fr auto; grid-template-rows: auto 1fr auto;
-  grid-template-areas: "name nav" ". ." "intro meta";
-  gap: var(--space-5);
-}
-.hero-name { grid-area: name; min-height: 1em; font-size: var(--size-name); }
-.hero-nav  { grid-area: nav; }
-.hero-intro { grid-area: intro; max-width: 560px; }
-.hero-meta { grid-area: meta; align-self: end; }
-
-/* Work grid: one tall card left, two stacked right */
-.work-grid { display: grid; grid-template-columns: 2fr 1fr; gap: var(--card-gap); }
-.work-grid .card { min-height: clamp(220px, 30vh, 320px); }
-.work-grid .card--tall { grid-row: span 2; min-height: clamp(460px, 62vh, 660px); }
+.work-card.is-open { z-index: 1; }
+.work-grid.no-anim .work-card { transition: background-color var(--dur-base) ease; }
 .card-meta { display: flex; justify-content: space-between; font-size: var(--size-micro); color: var(--grey-500); }
 
 @media (max-width: 720px) {
-  .work-grid { grid-template-columns: 1fr; }
-  .work-grid .card--tall { grid-row: auto; min-height: 420px; }
   .card--hero { grid-template-columns: 1fr; grid-template-areas: "name" "nav" "." "intro" "meta"; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .work-card { transition: background-color var(--dur-base) ease; }
 }
