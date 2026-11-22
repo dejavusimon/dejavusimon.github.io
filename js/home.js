@@ -34,7 +34,16 @@
     const W = g.clientWidth, cols = W >= 720 ? 3 : 2;
     return Math.round(Math.max(150, ((W - gap * (cols - 1)) / cols) * 0.72));
   }
+  // the tallest the title card's content needs: padding + name + gap + intro text
+  function heroContent() {
+    const pad = parseFloat(getComputedStyle(hero).paddingTop);
+    const cap = parseFloat(getComputedStyle(name).fontSize) * 0.72;
+    return pad * 2 + cap + 16 + intro.offsetHeight;
+  }
   function measure() {
+    // the top row is exactly as wide as the grid below, so the flap's edge always lines up
+    bar.style.maxWidth = "none";
+    bar.style.width = document.querySelector(".work-grid").clientWidth + "px";
     const cs = getComputedStyle(name), size = parseFloat(cs.fontSize);
     const ctx = document.createElement("canvas").getContext("2d");
     ctx.font = `${cs.fontWeight} ${size}px ${cs.fontFamily}`;
@@ -53,7 +62,7 @@
       cap, pad,
       fullW: clip.scrollWidth,
       dW: D.actualBoundingBoxRight - bearing + 1,                   // just the D
-      h0: cardHeight(),                                        // title row = one work card tall
+      h0: Math.round(Math.max(cardHeight() * 0.7, heroContent())),  // title row: 70% of a work card
       flapW: flapWidth(),
       sMin: 0.72,
     };
@@ -122,9 +131,17 @@
   const cards = [...grid.querySelectorAll(".work-card")];
   let active = -1, slots = [], pos = [], cols = 3;
   const gridPool = grid.querySelector(".grid-pool");
+  // the photo colour, a little richer (what the old saturate/brightness filter did)
+  function vivid(hex) {
+    let [r, g, b] = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255);
+    const mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2, d = mx - mn;
+    let h = 0, sat = d ? d / (1 - Math.abs(2 * l - 1)) : 0;
+    if (d) h = mx === r ? ((g - b) / d) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4;
+    return `hsl(${Math.round(h * 60 + 360) % 360} ${Math.min(100, sat * 175).toFixed(0)}% ${Math.min(92, l * 108).toFixed(0)}%)`;
+  }
   const poolBlobs = cards.map(el => {
     if (!el.dataset.c1) return null;
-    return [el.dataset.c1, el.dataset.c2].map(c => { const b = document.createElement("i"); b.style.background = c; gridPool.appendChild(b); return b; });
+    return [el.dataset.c1, el.dataset.c2].map(c => { const b = document.createElement("i"); b.style.setProperty("--c", vivid(c)); gridPool.appendChild(b); return b; });
   });
 
   function layoutGrid(animate = true, anchor) {
@@ -186,12 +203,27 @@
     return hit ? hit.i : null;                                       // null = in a gap between cards
   }
   const framesMode = () => body.classList.contains("is-frames");   // photos don't expand on hover
-  grid.addEventListener("pointermove", e => {
-    if (e.pointerType !== "mouse" || framesMode()) return;
-    const i = cardAt(e);
+  // Mouse: a card is open only while the pointer is over it. Over a gap, outside the grid,
+  // over the title bar, off the window, or after the page scrolls away from under the
+  // pointer, everything returns to the small grid. A short grace period lets the pointer
+  // cross a gap into the next card without the whole grid closing and reopening.
+  let pointer = null, closeTimer;
+  function track() {
+    if (!pointer || framesMode()) return;
+    const overBar = document.elementFromPoint(pointer.clientX, pointer.clientY)?.closest(".topbar");
+    const i = overBar ? null : cardAt(pointer);
+    clearTimeout(closeTimer);
     if (i !== null) setActive(i);
-  });
-  grid.addEventListener("pointerleave", e => { if (e.pointerType === "mouse") setActive(-1); });
+    else if (active >= 0) closeTimer = setTimeout(() => setActive(-1), 90);
+  }
+  document.addEventListener("pointermove", e => {
+    if (e.pointerType !== "mouse") return;
+    pointer = { clientX: e.clientX, clientY: e.clientY }; track();
+  }, { passive: true });
+  addEventListener("scroll", () => requestAnimationFrame(track), { passive: true });
+  const release = () => { pointer = null; clearTimeout(closeTimer); setActive(-1); };
+  document.documentElement.addEventListener("pointerleave", release);
+  addEventListener("blur", release);
   let lastType = "mouse";
   grid.addEventListener("pointerdown", e => { lastType = e.pointerType; });
   grid.addEventListener("click", e => {                              // touch: tap to open / close
@@ -243,12 +275,15 @@
     const hidden = flips % 2 === 0 ? ".face--back" : ".face--front";
     cards.forEach(el => { el.querySelector(hidden).dataset.show = MODES[next].panel; });
     flips++;
+    grid.classList.add("is-flipping");
     cardOrder().forEach((el, k) => {
       const inner = el.querySelector(".work-card-inner");
       inner.style.transitionDelay = (reduce ? 0 : k * 55) + "ms";
       inner.style.transform = `rotateX(${-180 * flips}deg)`;
     });
     setPageMode(next);
+    clearTimeout(settleTimer);
+    settleTimer = setTimeout(() => settleCards(MODES[next].panel), (reduce ? 0 : cards.length * 55) + 850);
     if (next === 2) active = -1;                                     // collapse any open card entering Frames
     layoutGrid(true);
     const label = `Showing ${MODES[next].word.toLowerCase()}. Flip to show ${MODES[(next + 1) % 3].word.toLowerCase()}`;
@@ -261,6 +296,23 @@
           { duration: 160, easing: "ease-out" }).finished)                              // small settle bounce
         .then(() => { leaf.style.transform = "rotateX(-180deg)"; done(); });
   }
+  // After a flip, every card rests at a whole number of half-turns. Put each one back to 0deg
+  // with the showing side on its front face, so the browser drops the 3D layers; leftover
+  // turned layers are what made rows of photos render cut off.
+  let settleTimer;
+  function settleCards(panel) {
+    if (flipping) return (settleTimer = setTimeout(() => settleCards(panel), 100));
+    cards.forEach(el => {
+      const inner = el.querySelector(".work-card-inner");
+      inner.style.transition = "none"; inner.style.transitionDelay = "0ms"; inner.style.transform = "none";
+      el.querySelector(".face--front").dataset.show = panel;
+      el.querySelector(".face--back").dataset.show = panel;
+    });
+    flips = 0;
+    grid.classList.remove("is-flipping");
+    void grid.offsetHeight;                                           // commit before restoring transitions
+    cards.forEach(el => { el.querySelector(".work-card-inner").style.transition = ""; });
+  }
   // cards flip in reading order: top-left first, across then down
   const cardOrder = () => [...cards].sort((a, b) => {
     const ra = a.getBoundingClientRect(), rb = b.getBoundingClientRect();
@@ -272,6 +324,8 @@
   // ---------- start ----------
   const start = () => { measure(); active = -1; pos = []; layoutGrid(false); };
   addEventListener("resize", () => { measure(); layoutGrid(false); });
+  let lastW = 0;
+  new ResizeObserver(() => { if (grid.clientWidth !== lastW) { lastW = grid.clientWidth; measure(); layoutGrid(false); } }).observe(grid);
   (document.fonts ? document.fonts.ready : Promise.resolve()).then(start);
   start();
 

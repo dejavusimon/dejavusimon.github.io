@@ -2,6 +2,7 @@
 
 :root { --board-pad: clamp(16px, 3vw, 40px); }
 
+html { scrollbar-gutter: stable; }
 html, body { overflow-x: clip; }
 body { transition: background-color var(--dur-slow) var(--ease-in-out); }
 body.is-home { background: var(--canvas); }
@@ -20,7 +21,7 @@ body.is-home.is-frames { background: #2e2b28; }  /* area-weighted average of all
 body.is-home .topbar { background: var(--canvas); }
 /* Title card spans two columns; the flip toggle is a card in the third, lined up with the grid below */
 .topbar-inner {
-  max-width: calc(var(--page-max) - 2 * var(--page-gutter)); margin: 0 auto;
+  max-width: calc(var(--page-max) - 2 * var(--page-gutter)); margin: 0 auto; box-sizing: border-box;
   display: grid; grid-template-columns: 1fr var(--flap-w, calc((100% - 2 * var(--card-gap)) / 3)); gap: var(--card-gap);
   height: var(--hero-h, 294px);
 }
@@ -87,9 +88,16 @@ body.is-docked .hero-name { visibility: visible; }
 }
 .work-grid { position: relative; }
 .work-card {
-  position: absolute; top: 0; left: 0; cursor: pointer; perspective: 1400px;
+  position: absolute; top: 0; left: 0; cursor: pointer;
   transition: transform .55s var(--ease-in-out), width .55s var(--ease-in-out), height .55s var(--ease-in-out);
 }
+/* 3D depth only while the cards are turning over: left on, Chrome stops drawing a card whose
+   top has scrolled out of the window (the half-missing photo rows) */
+.work-grid.is-flipping .work-card { perspective: 1400px; }
+/* at rest the cards are plain 2D: one face shown, no 3D layers for Chrome to cull */
+.work-grid:not(.is-flipping) .work-card-inner { transform-style: flat; }
+.work-grid:not(.is-flipping) .face { backface-visibility: visible; -webkit-backface-visibility: visible; }
+.work-grid:not(.is-flipping) .face--back { visibility: hidden; }
 .work-card-inner {
   position: absolute; inset: 0; transform-style: preserve-3d;
   transition: transform .8s cubic-bezier(.5, 0, .25, 1);
@@ -121,9 +129,13 @@ body.is-home .panel--frames:not(.is-empty) { background: transparent; }
 /* The colour pool: each photo's own main colours sit behind its card and bleed into the gaps,
    blending with the neighbours. It moves with the cards as they reflow. */
 .grid-pool { position: absolute; inset: 0; z-index: -1; pointer-events: none; opacity: 0;
-             filter: blur(120px) saturate(1.75) brightness(1.08); transition: opacity 1s var(--ease-in-out); }
+             transition: opacity 1s var(--ease-in-out); }
+/* each blob is its own soft-edged gradient (no blur filter: a page-sized blur was too slow to
+   paint while scrolling, so rows of photos showed up half drawn) */
 .is-frames .grid-pool { opacity: 1; }
-.grid-pool i { position: absolute; left: 0; top: 0; border-radius: 50%; opacity: 1;
+.grid-pool i { position: absolute; left: 0; top: 0; opacity: 1;
+               background: radial-gradient(closest-side, var(--c) 0%, color-mix(in srgb, var(--c) 80%, transparent) 30%,
+                 color-mix(in srgb, var(--c) 45%, transparent) 58%, color-mix(in srgb, var(--c) 15%, transparent) 82%, transparent 100%);
                transition: transform .55s var(--ease-in-out), width .55s var(--ease-in-out), height .55s var(--ease-in-out); }
 .work-grid { isolation: isolate; }
 .work-card.is-open { z-index: 1; }
