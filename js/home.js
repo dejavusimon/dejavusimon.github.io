@@ -292,6 +292,36 @@
   // decode every cover image up front so the first hover never waits on (or flashes) an image
   grid.querySelectorAll(".work-cover img, .frame-photo").forEach(img => { img.loading = "eager"; img.decode?.().catch(() => {}); });
 
+  // ---------- 3b. Frames: turn a photo over to see where it was taken ----------
+  cards.forEach(el => { if (el.dataset.c1) el.style.setProperty("--tint", el.dataset.c1); });
+  const persp = "perspective(1100px) ";
+  function turnPhoto(panel, show) {
+    if (panel.classList.contains("show-map") === show || panel._turning) return;
+    panel._turning = true;
+    const done = () => { panel.style.transform = ""; panel._turning = false; };
+    if (reduce) { panel.classList.toggle("show-map", show); return done(); }
+    const dir = show ? 1 : -1;                                       // turns the same way back
+    panel.animate([{ transform: persp + "rotateY(0deg)" }, { transform: persp + `rotateY(${90 * dir}deg)` }],
+                  { duration: 230, easing: "cubic-bezier(.55, 0, .85, .35)", fill: "forwards" })
+      .finished.then(a => {
+        panel.classList.toggle("show-map", show);
+        a.cancel();
+        return panel.animate([{ transform: persp + `rotateY(${-90 * dir}deg)` }, { transform: persp + "rotateY(0deg)" }],
+                             { duration: 320, easing: "cubic-bezier(.15, .65, .35, 1)" }).finished;
+      }).then(done, done);
+  }
+  grid.addEventListener("click", e => {
+    const pin = e.target.closest(".frame-pin"); if (!pin) return;
+    e.stopPropagation();
+    const panel = pin.closest(".panel--frames");
+    turnPhoto(panel, !panel.classList.contains("show-map"));
+  });
+  cards.forEach(el => el.addEventListener("mouseleave", e => {      // leaving the card turns it back
+    if (e.pointerType && e.pointerType !== "mouse") return;
+    el.querySelectorAll(".panel--frames.show-map").forEach(p => turnPhoto(p, false));
+  }));
+  const resetMaps = () => grid.querySelectorAll(".panel--frames.show-map").forEach(p => p.classList.remove("show-map"));
+
   // ---------- 4. Objects / Interfaces / Frames toggle ----------
   // A split-flap tile cycles three sides. Each flip drops the tile's top leaf and tips every
   // work card over top-to-bottom; the card's hidden face is loaded with the next side first.
@@ -340,6 +370,7 @@
       inner.style.transform = `rotateX(${-180 * flips}deg)`;
     });
     setPageMode(next);
+    resetMaps();
     clearTimeout(settleTimer);
     settleTimer = setTimeout(() => settleCards(MODES[next].panel), (reduce ? 0 : cards.length * 55) + 850);
     if (next === 2) active = -1;                                     // collapse any open card entering Frames
