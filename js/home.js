@@ -346,17 +346,28 @@
   function track() {
     if (!pointer || framesMode() || !canHover.matches || body.classList.contains("is-revealing") || body.classList.contains("intro-active")) return;
     const overBar = document.elementFromPoint(pointer.clientX, pointer.clientY)?.closest(".topbar");
-    const i = overBar ? null : cardAt(pointer);
-    clearTimeout(closeTimer);
-    if (i !== null) setActive(i);
-    else if (active >= 0) closeTimer = setTimeout(() => setActive(-1), 90);
+    let i = overBar ? null : cardAt(pointer);
+    if (i !== null && !hasWork(cards[i])) i = null;                  // empty cards never open
+    const target = i === null ? -1 : i;
+    if (target === active) { clearTimeout(closeTimer); pending = null; return; }
+    if (target === pending) return;                                  // already on its way
+    clearTimeout(closeTimer); pending = target;
+    // Hover intent: a card opens only once the pointer settles on it. Passing over other cards
+    // on the way (which would reshuffle the grid and move the card you're heading for) does nothing.
+    const wait = target === -1 ? 120 : active === -1 ? 60 : 170;
+    closeTimer = setTimeout(() => { pending = null; setActive(target); }, wait);
+  }
+  let pending = null;
+  function hasWork(el) {
+    const f = el.querySelector(".face--front");
+    return !!f.querySelector(`.panel--${f.dataset.show} .work-cover`);
   }
   document.addEventListener("pointermove", e => {
     if (e.pointerType !== "mouse") return;
     pointer = { clientX: e.clientX, clientY: e.clientY }; track();
   }, { passive: true });
   addEventListener("scroll", () => requestAnimationFrame(track), { passive: true });
-  const release = () => { pointer = null; clearTimeout(closeTimer); setActive(-1); };
+  const release = () => { pointer = null; clearTimeout(closeTimer); pending = null; setActive(-1); };
   document.documentElement.addEventListener("pointerleave", release);
   addEventListener("blur", release);
   // touchscreens: cards never expand (no hover there, and tapping should open the project later)
