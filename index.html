@@ -111,7 +111,7 @@
            opacity: 0; pointer-events: none; transition: opacity .3s ease; }
     .pin.open { opacity: 1; pointer-events: auto; }
     .pin form { display: grid; justify-items: center; gap: 18px; }
-    .pin-label { font-size: 13px; letter-spacing: .12em; text-transform: uppercase; color: #555; }
+    .pin-label { font-size: 13px; letter-spacing: .12em; text-transform: uppercase; color: #555; max-width: 80vw; text-align: center; line-height: 1.5; }
     .pin-boxes { display: flex; gap: 12px; }
     .pin-boxes span { width: 46px; height: 56px; border: 2px solid #1b1b1b; border-radius: 10px; display: grid; place-items: center; }
     .pin-boxes span.on::after { content: ""; width: 12px; height: 12px; border-radius: 50%; background: #1b1b1b; }
@@ -219,46 +219,83 @@
     <form autocomplete="off">
       <span class="pin-label">Enter PIN</span>
       <div class="pin-boxes"><span></span><span></span><span></span><span></span></div>
-      <input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" aria-label="PIN">
+      <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" aria-label="PIN">
     </form>
   </div>
 
+  <script>(()=>{var f=Uint8Array,S=Uint16Array,gr=Int32Array,tr=new f([0,0,0,0,0,0,0,0,1,1,1,1,2,2,2,2,3,3,3,3,4,4,4,4,5,5,5,5,0,0,0,0]),er=new f([0,0,0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9,10,10,11,11,12,12,13,13,0,0]),yr=new f([16,17,18,0,8,7,9,6,10,5,11,4,12,3,13,2,14,1,15]),ir=function(r,n){for(var t=new S(31),a=0;a<31;++a)t[a]=n+=1<<r[a-1];for(var i=new gr(t[30]),a=1;a<30;++a)for(var c=t[a];c<t[a+1];++c)i[c]=c-t[a]<<5|a;return{b:t,r:i}},ar=ir(tr,2),or=ar.b,wr=ar.r;or[28]=258,wr[258]=28;var sr=ir(er,0),mr=sr.b,Zr=sr.r,Y=new S(32768);for(o=0;o<32768;++o)g=(o&43690)>>1|(o&21845)<<1,g=(g&52428)>>2|(g&13107)<<2,g=(g&61680)>>4|(g&3855)<<4,Y[o]=((g&65280)>>8|(g&255)<<8)>>1;var g,o,I=function(r,n,t){for(var a=r.length,i=0,c=new S(n);i<a;++i)r[i]&&++c[r[i]-1];var y=new S(n);for(i=1;i<n;++i)y[i]=y[i-1]+c[i-1]<<1;var p;if(t){p=new S(1<<n);var z=15-n;for(i=0;i<a;++i)if(r[i])for(var U=i<<4|r[i],w=n-r[i],e=y[r[i]-1]++<<w,s=e|(1<<w)-1;e<=s;++e)p[Y[e]>>z]=U}else for(p=new S(a),i=0;i<a;++i)r[i]&&(p[i]=Y[y[r[i]-1]++]>>15-r[i]);return p},Z=new f(288);for(o=0;o<144;++o)Z[o]=8;var o;for(o=144;o<256;++o)Z[o]=9;var o;for(o=256;o<280;++o)Z[o]=7;var o;for(o=280;o<288;++o)Z[o]=8;var o,fr=new f(32);for(o=0;o<32;++o)fr[o]=5;var o;var xr=I(Z,9,1);var zr=I(fr,5,1),k=function(r){for(var n=r[0],t=1;t<r.length;++t)r[t]>n&&(n=r[t]);return n},u=function(r,n,t){var a=n/8|0;return(r[a]|r[a+1]<<8)>>(n&7)&t},W=function(r,n){var t=n/8|0;return(r[t]|r[t+1]<<8|r[t+2]<<16)>>(n&7)},Ar=function(r){return(r+7)/8|0},Mr=function(r,n,t){return(n==null||n<0)&&(n=0),(t==null||t>r.length)&&(t=r.length),new f(r.subarray(n,t))};var Sr=["unexpected EOF","invalid block type","invalid length/literal","invalid distance","stream finished","no stream handler",,"no callback","invalid UTF-8 data","extra field too long","date not in range 1980-2099","filename too long","stream finishing","invalid zip data"],l=function(r,n,t){var a=new Error(n||Sr[r]);if(a.code=r,Error.captureStackTrace&&Error.captureStackTrace(a,l),!t)throw a;return a},Ur=function(r,n,t,a){var i=r.length,c=a?a.length:0;if(!i||n.f&&!n.l)return t||new f(0);var y=!t,p=y||n.i!=2,z=n.i;y&&(t=new f(i*3));var U=function(_){var rr=t.length;if(_>rr){var nr=new f(Math.max(rr*2,_));nr.set(t),t=nr}},w=n.f||0,e=n.p||0,s=n.b||0,x=n.l,B=n.d,F=n.m,D=n.n,G=i*8;do{if(!x){w=u(r,e,1);var O=u(r,e+1,3);if(e+=3,O)if(O==1)x=xr,B=zr,F=9,D=5;else if(O==2){var P=u(r,e,31)+257,j=u(r,e+10,15)+4,J=P+u(r,e+5,31)+1;e+=14;for(var T=new f(J),$=new f(19),h=0;h<j;++h)$[yr[h]]=u(r,e+h*3,7);e+=j*3;for(var K=k($),ur=(1<<K)-1,lr=I($,K,1),h=0;h<J;){var Q=lr[u(r,e,ur)];e+=Q&15;var v=Q>>4;if(v<16)T[h++]=v;else{var A=0,E=0;for(v==16?(E=3+u(r,e,3),e+=2,A=T[h-1]):v==17?(E=3+u(r,e,7),e+=3):v==18&&(E=11+u(r,e,127),e+=7);E--;)T[h++]=A}}var V=T.subarray(0,P),m=T.subarray(P);F=k(V),D=k(m),x=I(V,F,1),B=I(m,D,1)}else l(1);else{var v=Ar(e)+4,q=r[v-4]|r[v-3]<<8,L=v+q;if(L>i){z&&l(0);break}p&&U(s+q),t.set(r.subarray(v,L),s),n.b=s+=q,n.p=e=L*8,n.f=w;continue}if(e>G){z&&l(0);break}}p&&U(s+131072);for(var vr=(1<<F)-1,cr=(1<<D)-1,H=e;;H=e){var A=x[W(r,e)&vr],M=A>>4;if(e+=A&15,e>G){z&&l(0);break}if(A||l(2),M<256)t[s++]=M;else if(M==256){H=e,x=null;break}else{var X=M-254;if(M>264){var h=M-257,C=tr[h];X=u(r,e,(1<<C)-1)+or[h],e+=C}var N=B[W(r,e)&cr],R=N>>4;N||l(3),e+=N&15;var m=mr[R];if(R>3){var C=er[R];m+=W(r,e)&(1<<C)-1,e+=C}if(e>G){z&&l(0);break}p&&U(s+131072);var d=s+X;if(s<m){var b=c-m,pr=Math.min(m,d);for(b+s<0&&l(3);s<pr;++s)t[s]=a[b+s]}for(;s<d;++s)t[s]=t[s-m]}}n.l=x,n.p=H,n.b=s,n.f=w,x&&(w=1,n.m=F,n.d=B,n.n=D)}while(!w);return s!=t.length&&y?Mr(t,0,s):t.subarray(0,s)};var Fr=new f(0);var Dr=function(r){(r[0]!=31||r[1]!=139||r[2]!=8)&&l(6,"invalid gzip data");var n=r[3],t=10;n&4&&(t+=(r[10]|r[11]<<8)+2);for(var a=(n>>3&1)+(n>>4&1);a>0;a-=!r[t++]);return t+(n&2)},Tr=function(r){var n=r.length;return(r[n-4]|r[n-3]<<8|r[n-2]<<16|r[n-1]<<24)>>>0};function hr(r,n){var t=Dr(r);return t+8>r.length&&l(6,"invalid gzip data"),Ur(r.subarray(t,-8),{i:2},n&&n.out||new f(Tr(r)),n&&n.dictionary)}var Cr=typeof TextDecoder<"u"&&new TextDecoder,Ir=0;try{Cr.decode(Fr,{stream:!0}),Ir=1}catch{}window.__gunzip=hr;})();</script>
   <script>
     // Hidden entrance. The new site is stored encrypted in vault.bin; the PIN is never in this
     // page. It is the key: PBKDF2 (600k rounds) turns it into an AES-256 key, and only the right
-    // PIN decrypts the file. A wrong PIN simply fails to decrypt.
+    // PIN decrypts the file. Only a failed decryption counts as a wrong PIN; a failed download or
+    // a browser that lacks a feature says so (that was being reported as "wrong" on some phones).
     (() => {
       const gear = document.querySelector(".gear"), pin = document.querySelector(".pin");
       const form = pin.querySelector("form"), input = pin.querySelector("input"), boxes = pin.querySelectorAll(".pin-boxes span");
-      let clicks = 0, timer, vault;
+      const label = pin.querySelector(".pin-label");
+      let clicks = 0, timer, vault = null, busy = false;
       gear.addEventListener("click", () => {
         clearTimeout(timer); clicks++;
         if (clicks >= 5) { clicks = 0; open(); return; }
         timer = setTimeout(() => clicks = 0, 1200);          // clicks must come in quick succession
       });
-      const getVault = () => vault ||= (window.__VAULT
-        ? Promise.resolve(Uint8Array.from(atob(window.__VAULT), c => c.charCodeAt(0)).buffer)
-        : fetch("vault.bin", { cache: "no-store" }).then(r => r.arrayBuffer()));
-      function open() { pin.classList.add("open"); pin.setAttribute("aria-hidden", "false"); input.value = ""; paint(); input.focus(); getVault(); }
+      async function download() {
+        if (window.__VAULT) return Uint8Array.from(atob(window.__VAULT), c => c.charCodeAt(0)).buffer;
+        for (let tries = 0; ; tries++) {
+          try {
+            const r = await fetch("vault.bin?v=" + Date.now(), { cache: "no-store" });
+            if (!r.ok) throw new Error("http " + r.status);
+            const b = await r.arrayBuffer();
+            if (new TextDecoder().decode(new Uint8Array(b, 0, 5)) !== "DJVS1") throw new Error("bad file");
+            return b;
+          } catch (e) { if (tries >= 2) throw Object.assign(e, { stage: "download" }); await new Promise(r => setTimeout(r, 800)); }
+        }
+      }
+      // a failed download is never kept: the next try downloads again
+      const getVault = () => vault ||= download().catch(e => { vault = null; throw e; });
+      const say = t => { label.textContent = t; };
+      function open() { pin.classList.add("open"); pin.setAttribute("aria-hidden", "false"); input.value = ""; say("Enter PIN"); paint(); input.focus(); getVault().catch(() => {}); }
       function close() { pin.classList.remove("open"); pin.setAttribute("aria-hidden", "true"); input.blur(); }
       const paint = () => boxes.forEach((b, i) => b.classList.toggle("on", i < input.value.length));
       pin.addEventListener("click", e => { if (e.target === pin) close(); else input.focus(); });
       addEventListener("keydown", e => { if (e.key === "Escape") close(); });
-      input.addEventListener("input", () => { input.value = input.value.replace(/\D/g, "").slice(0, 4); paint(); if (input.value.length === 4) unlock(input.value); });
+      const take = () => {
+        if (busy) return;
+        const v = input.value.replace(/\D/g, "").slice(0, 4);
+        if (v !== input.value) input.value = v;
+        paint(); if (v.length === 4) unlock(v);
+      };
+      input.addEventListener("input", e => { if (!e.isComposing) take(); });   // Android keyboards: wait for the digit to land
+      input.addEventListener("compositionend", take);
       form.addEventListener("submit", e => e.preventDefault());
+      async function gunzip(buf) {
+        if ("DecompressionStream" in window) {
+          try { return await new Response(new Blob([buf]).stream().pipeThrough(new DecompressionStream("gzip"))).text(); } catch (e) {}
+        }
+        return new TextDecoder().decode(window.__gunzip(new Uint8Array(buf)));   // fallback for browsers without it
+      }
       async function unlock(code) {
-        pin.classList.add("busy");
+        busy = true; pin.classList.add("busy"); say("Unlocking…");
+        let stage = "download";
         try {
+          if (!window.crypto || !crypto.subtle) throw Object.assign(new Error("no crypto"), { stage: "browser" });
           const u = new Uint8Array(await getVault());
+          stage = "key";
           const salt = u.slice(5, 21), iv = u.slice(21, 33), data = u.slice(33);
           const base = await crypto.subtle.importKey("raw", new TextEncoder().encode(code), "PBKDF2", false, ["deriveKey"]);
           const key = await crypto.subtle.deriveKey({ name: "PBKDF2", salt, iterations: 600000, hash: "SHA-256" },
                                                     base, { name: "AES-GCM", length: 256 }, false, ["decrypt"]);
+          stage = "decrypt";
           const zipped = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, data);
-          const html = await new Response(new Blob([zipped]).stream().pipeThrough(new DecompressionStream("gzip"))).text();
+          stage = "unpack";
+          const html = await gunzip(zipped);
           document.open(); document.write(html); document.close();
-        } catch {
-          pin.classList.remove("busy"); pin.classList.add("wrong");
+        } catch (e) {
+          busy = false; pin.classList.remove("busy");
+          const wrong = stage === "decrypt";
+          pin.classList.add("wrong");
+          say(wrong ? "Wrong PIN" : stage === "download" ? "Couldn't load. Check your connection and try again"
+                                  : "This browser couldn't open it (" + (e.stage || stage) + "). Try Chrome");
           setTimeout(() => { pin.classList.remove("wrong"); input.value = ""; paint(); }, 450);
         }
       }
