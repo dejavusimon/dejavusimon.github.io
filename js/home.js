@@ -177,6 +177,7 @@
   function apply(c) {
     lastC = c;
     bar.style.setProperty("--hero-h", lerp(m.h0, m.hMin, c) + "px");
+    bar.style.setProperty("--c", c.toFixed(3));                    // first: the sizes read below depend on it
     const fw = lerp(m.flapW, m.flapW / 2, ease(c));
     const E = ease(workE);
     if (E <= 0 && workE <= 0) {
@@ -191,7 +192,9 @@
       // the bar. Collapsed by scrolling, it is the left eighth.
       const full = bar.clientWidth, L0 = full - fw, split = .45;
       const ta = clamp(workE / split), tb = clamp((workE - split) / (1 - split));
-      const Rt = lerp(m.h0, m.hMin, c);                               // a square: as wide as the bar is tall
+      // the card hugs "‹ Physical": the word's own width plus the card margin on each side
+      const wd = backLayer?.querySelector(".flap-word");
+      const Rt = wd ? wd.offsetWidth + m.pad * 2 : lerp(m.h0, m.hMin, c);
       const L = lerp(L0, 0, ease(ta));
       const R = tb <= 0 ? full : lerp(full, Rt, workDir > 0 ? outBack(tb, 1.6) : ease(tb));
       const gp = Math.min(m.gap, L), track = full - L;
@@ -199,7 +202,7 @@
       bar.style.setProperty("--bar-gap", gp + "px");
       flap.style.width = (R - L) + "px"; flap.style.marginLeft = ""; flap.style.justifySelf = "start";
       // too narrow for "‹ Physical": only the "‹" stays (the word folds away, as in the collapsed bar)
-      if (backLayer) {
+      if (backLayer && !V3) {
         const wd = backLayer.querySelector(".flap-word"), fs = parseFloat(getComputedStyle(wd).fontSize);
         const need = wd.querySelector(".ic").offsetWidth + wd.querySelector(".flap-label").scrollWidth + fs * .3 + (V3 ? 12 : m.pad * 2);
         flap.classList.toggle("is-narrow", R - L < need);
