@@ -248,16 +248,53 @@
         if (clicks >= 5) { clicks = 0; open(); return; }
         timer = setTimeout(() => clicks = 0, 1200);          // clicks must come in quick succession
       });
-      async function download() {
-        if (window.__VAULT) return Uint8Array.from(atob(window.__VAULT), c => c.charCodeAt(0)).buffer;
+      // the file comes in 256 KB pieces, each retried on its own (slow or flaky networks, e.g. from China),
+      // then checked against the SHA-256 in its header, so a damaged download is never mistaken for a wrong PIN
+      const PART = 262144, HEAD = 41;
+      async function piece(from, to) {
         for (let tries = 0; ; tries++) {
           try {
-            const r = await fetch("vault.bin?v=" + Date.now(), { cache: "no-store" });
+            const r = await fetch(url, { cache: "no-store", headers: { Range: `bytes=${from}-${to}` } });
             if (!r.ok) throw new Error("http " + r.status);
-            const b = await r.arrayBuffer();
-            if (new TextDecoder().decode(new Uint8Array(b, 0, 5)) !== "DJVS1") throw new Error("bad file");
-            return b;
-          } catch (e) { if (tries >= 2) throw Object.assign(e, { stage: "download" }); await new Promise(r => setTimeout(r, 800)); }
+            const b = new Uint8Array(await r.arrayBuffer());
+            if (r.status === 200) return { whole: b };              // range ignored on the way: got the whole file
+            if (b.length !== Math.min(to, size ? size - 1 : to) - from + 1 && size) throw new Error("short piece");
+            return { part: b };
+          } catch (e) { if (tries >= 4) throw e; await new Promise(r => setTimeout(r, 600 * (tries + 1))); }
+        }
+      }
+      let url, size = 0;
+      async function fetchAll() {
+        url = "vault.bin?v=" + Date.now(); size = 0;
+        const first = await piece(0, PART - 1);
+        let all;
+        if (first.whole) all = first.whole;
+        else {
+          const h = first.part;
+          if (new TextDecoder().decode(h.subarray(0, 5)) !== "DJVS2") throw new Error("bad file");
+          size = HEAD + new DataView(h.buffer, h.byteOffset).getUint32(5);
+          all = new Uint8Array(size); all.set(h.subarray(0, Math.min(h.length, size)));
+          let got = Math.min(h.length, size);
+          for (let from = got; from < size; from += PART) {
+            const p = await piece(from, Math.min(from + PART, size) - 1);
+            if (p.whole) { all = p.whole; break; }
+            all.set(p.part, from);
+            say("Loading… " + Math.round(100 * (from + p.part.length) / size) + "%");
+          }
+        }
+        if (new TextDecoder().decode(all.subarray(0, 5)) !== "DJVS2") throw new Error("bad file");
+        const len = new DataView(all.buffer, all.byteOffset).getUint32(5);
+        if (all.length !== HEAD + len) throw new Error("incomplete " + all.length + "/" + (HEAD + len));
+        const body = all.subarray(HEAD);
+        const sum = new Uint8Array(await crypto.subtle.digest("SHA-256", body));
+        if (sum.some((x, i) => x !== all[9 + i])) throw new Error("damaged");
+        return body;
+      }
+      async function download() {
+        if (window.__VAULT) return Uint8Array.from(atob(window.__VAULT), c => c.charCodeAt(0)).subarray(HEAD);
+        for (let tries = 0; ; tries++) {
+          try { return await fetchAll(); }
+          catch (e) { if (tries >= 2) throw Object.assign(e, { stage: "download" }); }
         }
       }
       // a failed download is never kept: the next try downloads again
@@ -288,9 +325,9 @@
         let stage = "download";
         try {
           if (!window.crypto || !crypto.subtle) throw Object.assign(new Error("no crypto"), { stage: "browser" });
-          const u = new Uint8Array(await getVault());
+          const u = await getVault();
           stage = "key";
-          const salt = u.slice(5, 21), iv = u.slice(21, 33), data = u.slice(33);
+          const salt = u.slice(0, 16), iv = u.slice(16, 28), data = u.slice(28);
           const base = await crypto.subtle.importKey("raw", new TextEncoder().encode(code), "PBKDF2", false, ["deriveKey"]);
           const key = await crypto.subtle.deriveKey({ name: "PBKDF2", salt, iterations: 600000, hash: "SHA-256" },
                                                     base, { name: "AES-GCM", length: 256 }, false, ["decrypt"]);
@@ -303,7 +340,7 @@
           busy = false; pin.classList.remove("busy");
           const wrong = stage === "decrypt";
           pin.classList.add("wrong");
-          say(wrong ? "Wrong PIN" : stage === "download" ? "Couldn't load. Check your connection and try again"
+          say(wrong ? "Wrong PIN" : stage === "download" ? "Couldn't load (" + e.message + "). Try again"
                                   : "This browser couldn't open it (" + (e.stage || stage) + "). Try Chrome");
           setTimeout(() => { pin.classList.remove("wrong"); input.value = ""; paint(); }, 450);
         }
