@@ -37,7 +37,7 @@
   function cardHeight() {
     const g = document.querySelector(".work-grid");
     const gap = parseFloat(getComputedStyle(root).getPropertyValue("--card-gap")) || 12;
-    const W = g.clientWidth, cols = W >= 720 ? 3 : 2;
+    const W = gridW(), cols = W >= 720 ? 3 : 2;   // gridW: still right while the grid is hidden
     return Math.round(Math.max(150, ((W - gap * (cols - 1)) / cols) * 0.72));
   }
   // ---- intro behind a plus: closed / open heights, and where the plus/cross sits ----
@@ -94,7 +94,14 @@
     const introTop = pad + cap + (ph ? 14 : 20);
     hero.style.setProperty("--intro-top", introTop + "px");
     hero.style.setProperty("--intro-w", (ph ? inner : Math.min(inner - 200, (gW - gap * 2) / 3 - pad)) + "px");
-    const introH = intro.offsetHeight;
+    // the project page hides the intro (display:none); iOS fires resize as its toolbar slides on
+    // scroll, so measure it shown, or the card's resting height would shrink to fit nothing
+    let introH = intro.offsetHeight;
+    if (!introH) {
+      const st = intro.style.cssText;
+      intro.style.display = "block"; intro.style.visibility = "hidden";
+      introH = intro.offsetHeight; intro.style.cssText = st;
+    }
     if (ph) {
       const before = Math.max(cardHeight() * 0.7, pad * 2 + cap + 16 + introH);   // the old phone card
       m.hBase = Math.round(Math.max(before * 0.5, pad * 2 + cap + 12 + 28));
