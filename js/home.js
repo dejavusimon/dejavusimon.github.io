@@ -478,8 +478,8 @@
     frame: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3.5 8V4.5h3.5M17 4.5h3.5V8M20.5 16v3.5H17M7 19.5H3.5V16"/><circle cx="12" cy="12" r="2.6"/></svg>',
   };
   const MODES = [
-    { key: "physical", panel: "objects", word: "Objects", icon: ICON.cube },
-    { key: "digital", panel: "interfaces", word: "Interfaces", icon: ICON.cursor },
+    { key: "physical", panel: "objects", word: "Physical", icon: ICON.cube },
+    { key: "digital", panel: "interfaces", word: "Digital", icon: ICON.cursor },
     { key: "frames", panel: "frames", word: "Frames", icon: ICON.frame },
   ];
   const flap = document.querySelector(".flap");
@@ -597,7 +597,12 @@
     backLayer = flap.lastElementChild; flap.classList.add("is-back");
     flap.setAttribute("aria-label", "Back to all work");
     const ic = backLayer.querySelector(".ic"), oldI = backLayer.querySelector(".ic-old"), newI = backLayer.querySelector(".ic-new");
+    const word = backLayer.querySelector(".flap-word");
+    const startX = (flap.getBoundingClientRect().width - word.offsetWidth) / 2 - m.pad;   // where the centred word sits now
     if (reduce) { oldI.style.opacity = 0; return; }
+    // stays put while "‹" lands and the icon rolls off, then glides to the card's left edge
+    word.animate([{ transform: `translateX(${startX}px)` }, { transform: "translateX(0)" }],
+                 { duration: 520, delay: 1150, easing: "cubic-bezier(.6, 0, .25, 1)", fill: "backwards" });
     const fr = flap.getBoundingClientRect(), ir = ic.getBoundingClientRect();
     const fromRight = (fr.right - ir.left) + 10, toLeft = (ir.right - fr.left) + 20, size = ir.width;
     newI.animate([{ transform: `translateX(${fromRight}px)` }, { transform: "translateX(0)" }],
@@ -613,6 +618,11 @@
     if (!backLayer) return Promise.resolve();
     const oldI = backLayer.querySelector(".ic-old"), newI = backLayer.querySelector(".ic-new"), ic = backLayer.querySelector(".ic");
     oldI.getAnimations().forEach(a => a.cancel());
+    // the word heads back to the middle of the card it is about to become
+    const word = backLayer.querySelector(".flap-word");
+    const menuW = lerp(m.flapW, m.flapW / 2, ease(lastC)), endX = (menuW - word.offsetWidth) / 2 - m.pad;
+    word.animate([{ transform: "translateX(0)" }, { transform: `translateX(${endX}px)` }],
+                 { duration: 640, easing: "cubic-bezier(.65, 0, .35, 1)", fill: "forwards" });
     const fr = flap.getBoundingClientRect(), ir = ic.getBoundingClientRect(), size = ir.width;
     const toLeft = (ir.right - fr.left) + 20, turns = (toLeft / (Math.PI * size)) * 360;
     const a1 = newI.animate([{ transform: "translateX(0)" }, { transform: `translateX(${fr.right - ir.left + 10}px)` }],
@@ -649,8 +659,8 @@
     clearTimeout(closeTimer); pending = null;
     const inner = card.querySelector(".work-card-inner");
     const press = reduce ? null : inner.animate(
-      [{ transform: "scale(1)" }, { transform: "scale(.95)", offset: .4 }, { transform: "scale(1)" }],
-      { duration: 420, easing: "cubic-bezier(.3, .7, .4, 1)" });
+      [{ transform: "scale(1)" }, { transform: "scale(.95)", offset: .3 }, { transform: "scale(1.05)", offset: .7 }, { transform: "scale(1)" }],
+      { duration: 520, easing: "ease-in-out" });
     (press ? press.finished : Promise.resolve()).then(() => {
       const r0 = rectOf(card);
       const { z, clone, bg, panel } = zoomLayer(card, r0);

@@ -405,3 +405,10 @@ html[data-variant="v2"] .flap { order: -1; }
 .flap-back .ic { position: relative; display: inline-block; width: calc(.8em + 10px * var(--c, 0)); height: calc(.8em + 10px * var(--c, 0)); flex: none; }
 .flap-back .ic svg { position: absolute; inset: 0; width: 100%; height: 100%; }
 .is-frames .flap-back { color: #fff; }
+
+/* the two icons must be boxes, or their slide and roll (transforms) are ignored */
+.flap-back .ic > span { position: absolute; inset: 0; display: block; }
+/* V2 back button sits on the card's left edge */
+.flap-back { place-items: center start; padding-left: var(--card-pad); }
+/* V2: the name sits in the title card's top-right corner */
+html[data-variant="v2"] .hero-name { justify-self: end; grid-column: 1 / -1; transform-origin: 100% 0; }
