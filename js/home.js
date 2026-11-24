@@ -189,6 +189,8 @@
     lastC = c;
     bar.style.setProperty("--hero-h", lerp(m.h0, m.hMin, c) + "px");
     bar.style.setProperty("--c", c.toFixed(3));                    // first: the sizes read below depend on it
+    // toggle-card text: 17% of the card's height, between 16px and the size that still fits
+    bar.style.setProperty("--flap-fs", Math.max(16, Math.min(.17 * lerp(m.h0, m.hMin, c), m.fsMax || 56, 56)).toFixed(2) + "px");
     const fw = lerp(m.flapW, m.flapW / 2, ease(c));
     const E = ease(workE);
     if (E <= 0 && workE <= 0) {
