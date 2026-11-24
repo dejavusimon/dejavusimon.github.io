@@ -104,7 +104,7 @@
       m.hOpen = Math.round(Math.max(m.hBase, introTop + introH + pad + 4));
     }
     m.h0 = lerp(m.hBase, m.hOpen, ease(openE));
-    m.inner = inner; m.ph = ph; m.gap = gap;
+    m.inner = inner; m.ph = ph; m.gap = gap; m.barW = gW;
     m.togS = clamp((cap * m.sMin) / 22, 0.45, 1);                  // back arrow ≈ logo height when collapsed
     placeToggle();
     // the mark: same height as the capitals, its left edge on the D's left edge
@@ -190,13 +190,18 @@
       // edge held on the right border, shoving the title card out to the left; (2) the right edge
       // lets go and springs left (a quick overshoot and settle) until the card is the left quarter of
       // the bar. Collapsed by scrolling, it is the left eighth.
-      const full = bar.clientWidth, L0 = full - fw, split = .45;
+      const full = m.barW, L0 = full - fw, split = .45;
       const ta = clamp(workE / split), tb = clamp((workE - split) / (1 - split));
       // the card hugs "‹ Physical": the word's own width plus the card margin on each side
-      const wd = backLayer?.querySelector(".flap-word");
-      const Rt = wd ? wd.offsetWidth + m.pad * 2 : lerp(m.h0, m.hMin, c);
+      const Hc = lerp(m.h0, m.hMin, c), fs = clamp((.17 * Hc - 16) / 40) * 40 + 16;   // = clamp(16px, 17cqh, 56px)
+      const wordW = backPerEm ? (.8 * fs + 10 * c) + .3 * fs * (1 - c) + Math.min(backPerEm * fs, 8 * fs * (1 - c)) : Hc - m.pad * 2;
+      const Rt = wordW + m.pad * 2;
       const L = lerp(L0, 0, ease(ta));
-      const R = tb <= 0 ? full : lerp(full, Rt, workDir > 0 ? outBack(tb, 1.6) : ease(tb));
+      // the right edge eases in, dips a few pixels past its mark and settles; never narrower than
+      // the label it holds, so the words are never clipped mid-bounce
+      const easeOut = t => 1 - (1 - t) ** 3;
+      const dip = workDir > 0 ? Math.sin(Math.PI * clamp((tb - .5) / .5)) * m.pad * .6 : 0;
+      const R = tb <= 0 ? full : lerp(full, Rt, workDir > 0 ? easeOut(tb) : ease(tb)) - dip;
       const gp = Math.min(m.gap, L), track = full - L;
       bar.style.setProperty("--flap-w", track + "px");
       bar.style.setProperty("--bar-gap", gp + "px");
@@ -625,11 +630,12 @@
   }
   // V2: "‹" slides in from the right of the toggle card and knocks the mode icon rolling away
   const CHEV = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15.5 4.5 8 12l7.5 7.5"/></svg>';
-  let backLayer = null;
+  let backLayer = null, backPerEm = 0;
   function flapToBack() {
     const mo = MODES[mode];
     flap.insertAdjacentHTML("beforeend", `<span class="flap-back"><span class="flap-word"><span class="ic"><span class="ic-old">${mo.icon}</span><span class="ic-new">${CHEV}</span></span><span class="flap-label">${mo.word}</span></span></span>`);
     backLayer = flap.lastElementChild; flap.classList.add("is-back");
+    { const l = backLayer.querySelector(".flap-label"); backPerEm = l.scrollWidth / parseFloat(getComputedStyle(l).fontSize); }
     flap.setAttribute("aria-label", "Back to all work");
     const ic = backLayer.querySelector(".ic"), oldI = backLayer.querySelector(".ic-old"), newI = backLayer.querySelector(".ic-new");
     const word = backLayer.querySelector(".flap-word");

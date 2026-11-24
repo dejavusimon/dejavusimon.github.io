@@ -421,3 +421,6 @@ html[data-variant="v3"] body.has-work .topbar-inner { overflow: visible; }
 /* V3: the back label keeps its size (set by the bar's height only), whatever the card's width */
 html[data-variant="v3"] .flap-back .flap-word { font-size: clamp(16px, 17cqh, 56px); }
 html[data-variant="v3"] .flap-back .flap-label { transition: none; }   /* fold in step with the scroll, so the card can hug it */
+/* V3: "‹ Physical" stays centred in the card the whole time, exactly where the menu's word sits,
+   so nothing jumps when the back face takes over or hands back */
+html[data-variant="v3"] .flap-back { place-items: center; padding-left: 0; }
