@@ -8,6 +8,11 @@
   const root = document.documentElement, body = document.body;
   const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
   const V2 = root.dataset.variant === "v2";                        // prototype: toggle card on the left
+  const V3 = root.dataset.variant === "v3";                        // prototype: V1 layout, toggle card sweeps left
+  const BACKFLAP = V2 || V3;                                       // the toggle card becomes the back button
+  // V3's sweep overshoots a little and settles (ease-out-back), both ways
+  const outBack = (t, k = 1.25) => 1 + (k + 1) * (t - 1) ** 3 + k * (t - 1) ** 2;
+  let workDir = 1;
   let workE = 0, lastC = 0;                                         // work-page morph 0 → 1; last collapse amount
   const ease = t => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
   const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
@@ -139,7 +144,7 @@
     };
     requestAnimationFrame(step);
   }
-  toggle.addEventListener("click", () => { if (workOpen) { if (!V2) goBack(); } else setOpen(!open); });
+  toggle.addEventListener("click", () => { if (workOpen) { if (!BACKFLAP) goBack(); } else setOpen(!open); });
   // desktop: the email icon copies the address and says so; phones keep the mail app link
   const mail = hero.querySelector('.hero-social a[href^="mailto:"]');
   let toastEl, toastTimer;
@@ -172,12 +177,25 @@
   function apply(c) {
     lastC = c;
     bar.style.setProperty("--hero-h", lerp(m.h0, m.hMin, c) + "px");
-    const fw = lerp(m.flapW, m.flapW / 2, ease(c)), E = ease(workE);
-    if (E <= 0) {
+    const fw = lerp(m.flapW, m.flapW / 2, ease(c));
+    const E = V3 ? (workDir > 0 ? outBack(workE) : 1 - outBack(1 - workE)) : ease(workE);
+    if (E <= 0 && workE <= 0) {
       bar.style.setProperty("--flap-w", fw + "px");
       bar.style.removeProperty("--bar-gap");
-      flap.style.width = flap.style.justifySelf = flap.style.opacity = "";
-      hero.style.width = hero.style.justifySelf = hero.style.opacity = "";
+      flap.style.width = flap.style.justifySelf = flap.style.opacity = flap.style.marginLeft = "";
+      hero.style.width = hero.style.justifySelf = hero.style.opacity = hero.style.transform = "";
+    } else if (V3) {
+      // V3: the toggle card's left edge sweeps to the left border (overshooting a touch and
+      // settling) and shoves the title card out to the left; its right edge stays on the right
+      // border. On the work page it is the full width; collapsed, half of it.
+      const full = bar.clientWidth, gp = Math.max(0, m.gap * (1 - clamp(E)));
+      const w = lerp(fw, lerp(full, full * 0.5, ease(c)), E), track = Math.min(w, full);
+      bar.style.setProperty("--flap-w", track + "px");
+      bar.style.setProperty("--bar-gap", gp + "px");
+      flap.style.width = w + "px"; flap.style.marginLeft = (track - w) + "px"; flap.style.justifySelf = "start";
+      const heroNat = full - fw - m.gap, heroTrack = Math.max(0, full - track - gp);
+      hero.style.width = heroNat + "px"; hero.style.justifySelf = "start";
+      hero.style.transform = `translateX(${heroTrack - heroNat}px)`; hero.style.opacity = 1 - clamp(E * 1.4);
     } else if (!V2) {
       // V1: the title card grows and pushes the toggle card off to the right
       bar.style.setProperty("--flap-w", fw * (1 - E) + "px");
@@ -191,16 +209,16 @@
       hero.style.width = (full - fw - m.gap) + "px"; hero.style.justifySelf = "start"; hero.style.opacity = 1 - clamp(E * 1.25);
     }
     // V1 work page: the name fades as the bar shrinks and the back arrow takes the logo's place
-    const fade = V2 ? 0 : E * clamp(c * 2.5);
+    const fade = BACKFLAP ? 0 : E * clamp(c * 2.5);
     block.style.opacity = 1 - fade;
-    hero.style.setProperty("--tog-s", lerp(1, m.togS || 0.7, V2 ? 0 : E * ease(c)));
+    hero.style.setProperty("--tog-s", lerp(1, m.togS || 0.7, BACKFLAP ? 0 : E * ease(c)));
     bar.style.setProperty("--c", c.toFixed(3));
     const a = ease(clamp(c / 0.75));                 // shorten + shrink
     const b = ease(clamp((c - 0.7) / 0.3));          // D → mark
     clip.style.width = lerp(m.fullW, m.dW, a) + "px";
     block.style.transform = `scale(${lerp(1, m.sMin, a)})`;
     name.style.opacity = 1 - b;
-    mark.style.opacity = b * (1 - (V2 ? 0 : E));
+    mark.style.opacity = b * (1 - (BACKFLAP ? 0 : E));
     body.classList.toggle("is-collapsed", c > 0.3);
   }
   let snapTimer;
@@ -545,7 +563,7 @@
     const ra = a.getBoundingClientRect(), rb = b.getBoundingClientRect();
     return Math.round(ra.top - rb.top) || ra.left - rb.left;
   });
-  flap.addEventListener("click", () => { if (workOpen) { if (V2) goBack(); } else flip(); });
+  flap.addEventListener("click", () => { if (workOpen) { if (BACKFLAP) goBack(); } else flip(); });
   flap.removeAttribute("aria-pressed");
 
   // ---------- 5. Work page (prototype) ----------
@@ -559,6 +577,8 @@
   const EASE_Z = "cubic-bezier(.7, 0, .2, 1)";
   function tweenWork(to, dur) {
     const from = workE, t0 = performance.now(), id = ++workAnim;
+    workDir = to > from ? 1 : -1;
+    if (V3) dur *= 1.25;                                             // room for the settle
     body.classList.add("has-work");
     return new Promise(res => {
       const step = now => {
@@ -678,7 +698,7 @@
       z.animate([{ ...box(r0), borderRadius: getComputedStyle(card).borderRadius }, { ...box(r1) }], { duration: D, easing: EASE_Z, fill: "forwards" });
       clone.animate([{ transform: "scale(1)", opacity: 1 }, { transform: "scale(1.35)", opacity: 0 }], { duration: D, easing: "cubic-bezier(.5, 0, .9, .5)", fill: "forwards" });
       tweenWork(1, D);
-      if (V2) flapToBack(); else morphToggle(true);
+      if (BACKFLAP) flapToBack(); else morphToggle(true);
       body.classList.add("is-work");
       setTimeout(() => {
         sheet.style.setProperty("--sheet-bg", bg); sheet.style.setProperty("--sheet-ink", ink);
@@ -711,7 +731,7 @@
     z.animate([{ ...box(r1) }, { ...box(r0), borderRadius: getComputedStyle(card).borderRadius }], { duration: D, easing: EASE_Z, fill: "forwards" });
     clone.animate([{ transform: "scale(1.35)", opacity: 0 }, { transform: "scale(1)", opacity: 1 }], { duration: D, easing: "cubic-bezier(.1, .5, .5, 1)", fill: "forwards" });
     tweenWork(0, D);
-    if (V2) flapToMenu(); else morphToggle(false);
+    if (BACKFLAP) flapToMenu(); else morphToggle(false);
     setTimeout(() => {
       card.style.visibility = ""; z.remove();
       workOpen = false; workBusy = false; workCard = null;

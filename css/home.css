@@ -22,7 +22,7 @@ body.is-home .topbar { background: var(--canvas); }
 /* Title card spans two columns; the flip toggle is a card in the third, lined up with the grid below */
 .topbar-inner {
   max-width: calc(var(--page-max) - 2 * var(--page-gutter)); margin: 0 auto; box-sizing: border-box;
-  display: grid; grid-template-columns: 1fr var(--flap-w, calc((100% - 2 * var(--card-gap)) / 3)); gap: var(--card-gap);
+  display: grid; grid-template-columns: minmax(0, 1fr) var(--flap-w, calc((100% - 2 * var(--card-gap)) / 3)); gap: var(--card-gap);
   height: var(--hero-h, 294px);
 }
 
@@ -396,7 +396,7 @@ body.is-work .hero-social, body.is-work .hero-intro { display: none; }
 .work-zoom .work-cover { opacity: 1; }
 
 /* ===== V2: toggle card on the left, title card on the right ======================= */
-html[data-variant="v2"] .topbar-inner { grid-template-columns: var(--flap-w, calc((100% - 2 * var(--card-gap)) / 3)) 1fr; }
+html[data-variant="v2"] .topbar-inner { grid-template-columns: var(--flap-w, calc((100% - 2 * var(--card-gap)) / 3)) minmax(0, 1fr); }
 html[data-variant="v2"] .flap { order: -1; }
 /* back face of the toggle card on a work page: "‹ Objects" */
 .flap-back { position: absolute; inset: 0; z-index: 3; border-radius: var(--radius-card); background: var(--ink); overflow: hidden;
@@ -412,3 +412,6 @@ html[data-variant="v2"] .flap { order: -1; }
 .flap-back { place-items: center start; padding-left: var(--card-pad); }
 /* V2: the name sits in the title card's top-right corner */
 html[data-variant="v2"] .hero-name { justify-self: end; grid-column: 1 / -1; transform-origin: 100% 0; }
+
+/* V3: nothing clipped; the title card fades as it leaves, the toggle card's sweep may overshoot */
+html[data-variant="v3"] body.has-work .topbar-inner { overflow: visible; }
