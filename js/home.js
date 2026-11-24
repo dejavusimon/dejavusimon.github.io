@@ -574,9 +574,10 @@
   // into a 90° arrowhead, the horizontal one slides right and grows a little into the shaft
   const tv = toggle.querySelector(".tog-v"), th = toggle.querySelector(".tog-h");
   const PLUS = { v: [[18, 3], [18, 18], [18, 33]], h: [[3, 18], [18, 18], [33, 18]] };
-  const ARROW = { v: [[18.5, 7.5], [8, 18], [18.5, 28.5]], h: [[8, 18], [23, 18], [38, 18]] };
+  const ARROW = { v: [[23, 3], [8, 18], [23, 33]], h: [[8, 18], [24, 18], [40, 18]] };   // head as tall as the plus
   let morphId = 0;
-  function morphToggle(toArrow, dur = 560) {
+  const SLOW = 1.11;                                                 // icon motions, 10% slower
+  function morphToggle(toArrow, dur = 560 * SLOW) {
     const A = toArrow ? PLUS : ARROW, B = toArrow ? ARROW : PLUS, t0 = performance.now(), id = ++morphId;
     const pts = (k, t) => A[k].map((p, i) => [lerp(p[0], B[k][i][0], t), lerp(p[1], B[k][i][1], t)].map(n => n.toFixed(2)).join(",")).join(" ");
     const step = now => {
@@ -602,17 +603,17 @@
     if (reduce) { oldI.style.opacity = 0; return; }
     // stays put while "‹" lands and the icon rolls off, then glides to the card's left edge
     word.animate([{ transform: `translateX(${startX}px)` }, { transform: "translateX(0)" }],
-                 { duration: 520, delay: 1150, easing: "cubic-bezier(.6, 0, .25, 1)", fill: "backwards" });
+                 { duration: 520 * SLOW, delay: 1150 * SLOW, easing: "cubic-bezier(.6, 0, .25, 1)", fill: "backwards" });
     const fr = flap.getBoundingClientRect(), ir = ic.getBoundingClientRect();
     const fromRight = (fr.right - ir.left) + 10, toLeft = (ir.right - fr.left) + 20, size = ir.width;
     newI.animate([{ transform: `translateX(${fromRight}px)` }, { transform: "translateX(0)" }],
-                 { duration: 620, delay: 260, easing: "cubic-bezier(.3, .9, .35, 1.12)", fill: "backwards" });
+                 { duration: 620 * SLOW, delay: 260 * SLOW, easing: "cubic-bezier(.3, .9, .35, 1.12)", fill: "backwards" });
     // contact a little before the arrow lands: the cube rolls off to the left
     const turns = -(toLeft / (Math.PI * size)) * 360;               // rolls like a wheel of its own size
     oldI.animate([{ transform: "translateX(0) rotate(0deg)", opacity: 1 },
                   { transform: `translateX(${-toLeft}px) rotate(${turns}deg)`, opacity: 1, offset: .85 },
                   { transform: `translateX(${-toLeft - size}px) rotate(${turns * 1.15}deg)`, opacity: 0 }],
-                 { duration: 760, delay: 560, easing: "cubic-bezier(.2, .55, .3, 1)", fill: "both" });
+                 { duration: 760 * SLOW, delay: 560 * SLOW, easing: "cubic-bezier(.2, .55, .3, 1)", fill: "both" });
   }
   function flapToMenu() {
     if (!backLayer) return Promise.resolve();
@@ -625,12 +626,11 @@
                  { duration: 640, easing: "cubic-bezier(.65, 0, .35, 1)", fill: "forwards" });
     const fr = flap.getBoundingClientRect(), ir = ic.getBoundingClientRect(), size = ir.width;
     const toLeft = (ir.right - fr.left) + 20, turns = (toLeft / (Math.PI * size)) * 360;
-    const a1 = newI.animate([{ transform: "translateX(0)" }, { transform: `translateX(${fr.right - ir.left + 10}px)` }],
-                            { duration: 420, easing: "cubic-bezier(.6, 0, .9, .4)", fill: "forwards" });
+    const a1 = newI.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 160 * SLOW, easing: "ease-out", fill: "forwards" });
     const a2 = oldI.animate([{ transform: `translateX(${-toLeft - size}px) rotate(${-turns}deg)`, opacity: 0 },
                              { transform: `translateX(${-toLeft}px) rotate(${-turns * .85}deg)`, opacity: 1, offset: .15 },
                              { transform: "translateX(0) rotate(0deg)", opacity: 1 }],
-                            { duration: 700, delay: 120, easing: "cubic-bezier(.2, .6, .3, 1)", fill: "both" });
+                            { duration: 700 * SLOW, delay: 120 * SLOW, easing: "cubic-bezier(.2, .6, .3, 1)", fill: "both" });
     return Promise.all([a1.finished, a2.finished]).then(() => {
       backLayer.remove(); backLayer = null; flap.classList.remove("is-back");
       flap.setAttribute("aria-label", `Showing ${MODES[mode].word.toLowerCase()}. Flip to show ${MODES[(mode + 1) % 3].word.toLowerCase()}`);
@@ -658,11 +658,12 @@
     if (open) setOpen(false);
     clearTimeout(closeTimer); pending = null;
     const inner = card.querySelector(".work-card-inner");
-    const press = reduce ? null : inner.animate(
-      [{ transform: "scale(1)" }, { transform: "scale(.95)", offset: .3 }, { transform: "scale(1.05)", offset: .7 }, { transform: "scale(1)" }],
-      { duration: 520, easing: "ease-in-out" });
+    const press = reduce ? null : inner.animate([{ transform: "scale(1)" }, { transform: "scale(.95)" }],
+      { duration: 200, easing: "cubic-bezier(.4, 0, .6, 1)", fill: "forwards" });
     (press ? press.finished : Promise.resolve()).then(() => {
-      const r0 = rectOf(card);
+      // start the zoom from the pressed-in (95%) card, so it springs straight out to the page
+      const rc = rectOf(card), k = press ? .95 : 1;
+      const r0 = { left: rc.left + rc.width * (1 - k) / 2, top: rc.top + rc.height * (1 - k) / 2, width: rc.width * k, height: rc.height * k };
       const { z, clone, bg, panel } = zoomLayer(card, r0);
       const ink = getComputedStyle(panel).color;
       card.style.visibility = "hidden";
@@ -686,7 +687,7 @@
         grid.hidden = true; page.hidden = false;
         grid.getAnimations().forEach(a => a.cancel());
         cards.forEach(el => el.getAnimations().forEach(a => { if (a.effect && a.effect.getKeyframes().some(k => "opacity" in k)) a.cancel(); }));
-        card.style.visibility = "";
+        card.style.visibility = ""; press?.cancel();
         requestAnimationFrame(() => { z.remove(); workBusy = false; });
       }, D + 20);
     });
