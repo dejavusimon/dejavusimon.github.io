@@ -320,6 +320,16 @@
         }
         return new TextDecoder().decode(window.__gunzip(new Uint8Array(buf)));   // fallback for browsers without it
       }
+      async function open1(code, u, iters) {
+        const salt = u.slice(0, 16), iv = u.slice(16, 28), data = u.slice(28);
+        const base = await crypto.subtle.importKey("raw", new TextEncoder().encode(code), "PBKDF2", false, ["deriveKey"]);
+        const key = await crypto.subtle.deriveKey({ name: "PBKDF2", salt, iterations: iters, hash: "SHA-256" },
+                                                  base, { name: "AES-GCM", length: 256 }, false, ["decrypt"]);
+        return crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, data);
+      }
+      // known answer ("ok" sealed with 0000): if this fails, the browser's decryption is broken, not the PIN
+      const selfTest = () => open1("0000", Uint8Array.from(atob("A8zcW4xVrtE0OP182gn7TFpWFgkIPHbWPIzM7Rii18wHhP0WbfDhy04DhBmq0g=="), c => c.charCodeAt(0)), 1000)
+        .then(b => new TextDecoder().decode(b) === "ok", () => false);
       async function unlock(code) {
         busy = true; pin.classList.add("busy"); say("Unlocking…");
         let stage = "download";
@@ -327,21 +337,20 @@
           if (!window.crypto || !crypto.subtle) throw Object.assign(new Error("no crypto"), { stage: "browser" });
           const u = await getVault();
           stage = "key";
-          const salt = u.slice(0, 16), iv = u.slice(16, 28), data = u.slice(28);
-          const base = await crypto.subtle.importKey("raw", new TextEncoder().encode(code), "PBKDF2", false, ["deriveKey"]);
-          const key = await crypto.subtle.deriveKey({ name: "PBKDF2", salt, iterations: 600000, hash: "SHA-256" },
-                                                    base, { name: "AES-GCM", length: 256 }, false, ["decrypt"]);
           stage = "decrypt";
-          const zipped = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, data);
+          const zipped = await open1(code, u, 600000);
           stage = "unpack";
           const html = await gunzip(zipped);
           document.open(); document.write(html); document.close();
         } catch (e) {
           busy = false; pin.classList.remove("busy");
-          const wrong = stage === "decrypt";
+          let wrong = stage === "decrypt";
+          // what reached the page, as code points, so a keyboard sending odd characters shows up
+          const typed = [...code].map(ch => ch.charCodeAt(0) - 48).join("");
+          if (wrong && !(await selfTest())) { wrong = false; e.stage = "crypto"; }
           pin.classList.add("wrong");
-          say(wrong ? "Wrong PIN" : stage === "download" ? "Couldn't load (" + e.message + "). Try again"
-                                  : "This browser couldn't open it (" + (e.stage || stage) + "). Try Chrome");
+          say(wrong ? "Wrong PIN · " + typed + " · b3" : stage === "download" ? "Couldn't load (" + e.message + "). Try again"
+                                  : "This browser couldn't open it (" + (e.stage || stage) + ", b3). Try Chrome");
           setTimeout(() => { pin.classList.remove("wrong"); input.value = ""; paint(); }, 450);
         }
       }
