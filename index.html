@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
   <title>DEJAVUSIMON — Sisheng Su</title>
   <meta name="description" content="Portfolio of Sisheng (Simon) Su — under maintenance.">
   <link rel="icon" href="/favicon.ico" sizes="any">
@@ -120,6 +120,15 @@
     .pin.wrong .pin-boxes { animation: shake .4s; }
     @keyframes shake { 20%, 60% { transform: translateX(-8px); } 40%, 80% { transform: translateX(8px); } }
   </style>
+  <!-- no pinch/double-tap zoom on phones: iOS ignores user-scalable, so the gestures are blocked in script too -->
+  <style>html { touch-action: pan-x pan-y; }</style>
+  <script>
+    (function () {
+      var stop = function (e) { e.preventDefault(); };
+      ["gesturestart", "gesturechange", "gestureend"].forEach(function (t) { document.addEventListener(t, stop, { passive: false }); });
+      document.addEventListener("touchmove", function (e) { if (e.touches.length > 1 || (e.scale && e.scale !== 1)) e.preventDefault(); }, { passive: false });
+    })();
+  </script>
 </head>
 <body>
   <button class="logo-btn" type="button" aria-expanded="false" aria-controls="contact" aria-label="Show contact info">
