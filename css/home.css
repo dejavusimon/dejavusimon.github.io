@@ -62,7 +62,7 @@ body.is-home .flap { opacity: 1; }
 .flap-bottom .flap-content { top: -100%; }
 .flap-word {
   display: flex; align-items: center; gap: .3em; white-space: nowrap;
-  font: 700 clamp(16px, min(17cqh, 10.5cqw), 56px)/1 var(--font-display); letter-spacing: .01em;
+  font: 700 clamp(16px, min(17cqh, var(--flap-fs-max, 56px)), 56px)/1 var(--font-display);   /* set by the card height only, so it never changes when the card narrows or widens */ letter-spacing: .01em;
 }
 .flap-word { gap: calc(.3em * (1 - var(--c, 0))); }
 .flap-word svg { width: calc(.8em + 10px * var(--c, 0)); height: calc(.8em + 10px * var(--c, 0)); flex: none; }
@@ -419,7 +419,7 @@ html[data-variant="v3"] body.has-work .topbar-inner { overflow: visible; }
 .flap.is-narrow .flap-back .flap-label { max-width: 0; opacity: 0; }
 .flap.is-narrow .flap-back .flap-word { gap: 0; }
 /* V3: the back label keeps its size (set by the bar's height only), whatever the card's width */
-html[data-variant="v3"] .flap-back .flap-word { font-size: clamp(16px, 17cqh, 56px); }
+html[data-variant="v3"] .flap-back .flap-word { font-size: clamp(16px, min(17cqh, var(--flap-fs-max, 56px)), 56px); }
 html[data-variant="v3"] .flap-back .flap-label { transition: none; }   /* fold in step with the scroll, so the card can hug it */
 /* V3: "‹ Physical" stays centred in the card the whole time, exactly where the menu's word sits,
    so nothing jumps when the back face takes over or hands back */

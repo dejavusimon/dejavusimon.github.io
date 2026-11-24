@@ -105,6 +105,17 @@
     }
     m.h0 = lerp(m.hBase, m.hOpen, ease(openE));
     m.inner = inner; m.ph = ph; m.gap = gap; m.barW = gW;
+    if (typeof MODES !== "undefined") {
+      const probe = document.createElement("span");
+      probe.style.cssText = "position:absolute;visibility:hidden;white-space:nowrap;font:700 100px/1 var(--font-display);letter-spacing:.01em;display:flex;gap:.3em";
+      let perEm = 0;
+      for (const mo of MODES) {
+        probe.innerHTML = `<span style="width:.8em;flex:none"></span><span>${mo.word}</span>`;
+        bar.appendChild(probe); perEm = Math.max(perEm, probe.scrollWidth / 100); probe.remove();
+      }
+      m.fsMax = Math.max(16, Math.min(56, (m.flapW - 2 * Math.max(10, pad * .6)) / perEm));
+      bar.style.setProperty("--flap-fs-max", m.fsMax.toFixed(2) + "px");
+    }
     m.togS = clamp((cap * m.sMin) / 22, 0.45, 1);                  // back arrow ≈ logo height when collapsed
     placeToggle();
     // the mark: same height as the capitals, its left edge on the D's left edge
@@ -193,7 +204,7 @@
       const full = m.barW, L0 = full - fw, split = .45;
       const ta = clamp(workE / split), tb = clamp((workE - split) / (1 - split));
       // the card hugs "‹ Physical": the word's own width plus the card margin on each side
-      const Hc = lerp(m.h0, m.hMin, c), fs = clamp((.17 * Hc - 16) / 40) * 40 + 16;   // = clamp(16px, 17cqh, 56px)
+      const Hc = lerp(m.h0, m.hMin, c), fs = Math.max(16, Math.min(.17 * Hc, m.fsMax || 56, 56));   // = the CSS size
       const wordW = backPerEm ? (.8 * fs + 10 * c) + .3 * fs * (1 - c) + Math.min(backPerEm * fs, 8 * fs * (1 - c)) : Hc - m.pad * 2;
       const Rt = wordW + m.pad * 2;
       const L = lerp(L0, 0, ease(ta));
@@ -616,6 +627,7 @@
   const ARROW = { v: [[23, 3], [8, 18], [23, 33]], h: [[8, 18], [24, 18], [40, 18]] };   // head as tall as the plus
   let morphId = 0;
   const SLOW = 1.11;                                                 // icon motions, 10% slower
+  const KICK = SLOW * 1.2;                                          // the "‹" kicking the icon away: 20% slower again, to be noticed
   function morphToggle(toArrow, dur = 560 * SLOW) {
     const A = toArrow ? PLUS : ARROW, B = toArrow ? ARROW : PLUS, t0 = performance.now(), id = ++morphId;
     const pts = (k, t) => A[k].map((p, i) => [lerp(p[0], B[k][i][0], t), lerp(p[1], B[k][i][1], t)].map(n => n.toFixed(2)).join(",")).join(" ");
@@ -643,17 +655,17 @@
     if (reduce) { oldI.style.opacity = 0; return; }
     // stays put while "‹" lands and the icon rolls off, then glides to the card's left edge
     if (V2) word.animate([{ transform: `translateX(${startX}px)` }, { transform: "translateX(0)" }],
-                 { duration: 520 * SLOW, delay: 1150 * SLOW, easing: "cubic-bezier(.6, 0, .25, 1)", fill: "backwards" });
+                 { duration: 520 * KICK, delay: 1150 * KICK, easing: "cubic-bezier(.6, 0, .25, 1)", fill: "backwards" });
     const fr = flap.getBoundingClientRect(), ir = ic.getBoundingClientRect();
     const fromRight = (fr.right - ir.left) + 10, toLeft = (ir.right - fr.left) + 20, size = ir.width;
     newI.animate([{ transform: `translateX(${fromRight}px)` }, { transform: "translateX(0)" }],
-                 { duration: 620 * SLOW, delay: 260 * SLOW, easing: "cubic-bezier(.3, .9, .35, 1.12)", fill: "backwards" });
+                 { duration: 620 * KICK, delay: 260 * KICK, easing: "cubic-bezier(.3, .9, .35, 1.12)", fill: "backwards" });
     // contact a little before the arrow lands: the cube rolls off to the left
     const turns = -(toLeft / (Math.PI * size)) * 360;               // rolls like a wheel of its own size
     oldI.animate([{ transform: "translateX(0) rotate(0deg)", opacity: 1 },
                   { transform: `translateX(${-toLeft}px) rotate(${turns}deg)`, opacity: 1, offset: .85 },
                   { transform: `translateX(${-toLeft - size}px) rotate(${turns * 1.15}deg)`, opacity: 0 }],
-                 { duration: 760 * SLOW, delay: 560 * SLOW, easing: "cubic-bezier(.2, .55, .3, 1)", fill: "both" });
+                 { duration: 760 * KICK, delay: 560 * KICK, easing: "cubic-bezier(.2, .55, .3, 1)", fill: "both" });
   }
   function flapToMenu() {
     if (!backLayer) return Promise.resolve();
@@ -666,11 +678,11 @@
                  { duration: 640, easing: "cubic-bezier(.65, 0, .35, 1)", fill: "forwards" });
     const fr = flap.getBoundingClientRect(), ir = ic.getBoundingClientRect(), size = ir.width;
     const toLeft = (ir.right - fr.left) + 20, turns = (toLeft / (Math.PI * size)) * 360;
-    const a1 = newI.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 160 * SLOW, easing: "ease-out", fill: "forwards" });
+    const a1 = newI.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 160 * KICK, easing: "ease-out", fill: "forwards" });
     const a2 = oldI.animate([{ transform: `translateX(${-toLeft - size}px) rotate(${-turns}deg)`, opacity: 0 },
                              { transform: `translateX(${-toLeft}px) rotate(${-turns * .85}deg)`, opacity: 1, offset: .15 },
                              { transform: "translateX(0) rotate(0deg)", opacity: 1 }],
-                            { duration: 700 * SLOW, delay: 120 * SLOW, easing: "cubic-bezier(.2, .6, .3, 1)", fill: "both" });
+                            { duration: 700 * KICK, delay: 120 * KICK, easing: "cubic-bezier(.2, .6, .3, 1)", fill: "both" });
     return Promise.all([a1.finished, a2.finished]).then(() => {
       backLayer.remove(); backLayer = null; flap.classList.remove("is-back");
       flap.setAttribute("aria-label", `Showing ${MODES[mode].word.toLowerCase()}. Flip to show ${MODES[(mode + 1) % 3].word.toLowerCase()}`);
