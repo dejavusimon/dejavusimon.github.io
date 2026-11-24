@@ -191,7 +191,7 @@
       // the bar. Collapsed by scrolling, it is the left eighth.
       const full = bar.clientWidth, L0 = full - fw, split = .45;
       const ta = clamp(workE / split), tb = clamp((workE - split) / (1 - split));
-      const Rt = full * lerp(.25, .125, ease(c));
+      const Rt = lerp(m.h0, m.hMin, c);                               // a square: as wide as the bar is tall
       const L = lerp(L0, 0, ease(ta));
       const R = tb <= 0 ? full : lerp(full, Rt, workDir > 0 ? outBack(tb, 1.6) : ease(tb));
       const gp = Math.min(m.gap, L), track = full - L;
@@ -201,7 +201,7 @@
       // too narrow for "‹ Physical": only the "‹" stays (the word folds away, as in the collapsed bar)
       if (backLayer) {
         const wd = backLayer.querySelector(".flap-word"), fs = parseFloat(getComputedStyle(wd).fontSize);
-        const need = wd.querySelector(".ic").offsetWidth + wd.querySelector(".flap-label").scrollWidth + fs * .3 + m.pad * 2;
+        const need = wd.querySelector(".ic").offsetWidth + wd.querySelector(".flap-label").scrollWidth + fs * .3 + (V3 ? 12 : m.pad * 2);
         flap.classList.toggle("is-narrow", R - L < need);
       }
       const heroNat = full - fw - m.gap, heroTrack = Math.max(0, L - gp);
@@ -633,7 +633,7 @@
     const startX = (flap.getBoundingClientRect().width - word.offsetWidth) / 2 - m.pad;   // where the centred word sits now
     if (reduce) { oldI.style.opacity = 0; return; }
     // stays put while "‹" lands and the icon rolls off, then glides to the card's left edge
-    word.animate([{ transform: `translateX(${startX}px)` }, { transform: "translateX(0)" }],
+    if (V2) word.animate([{ transform: `translateX(${startX}px)` }, { transform: "translateX(0)" }],
                  { duration: 520 * SLOW, delay: 1150 * SLOW, easing: "cubic-bezier(.6, 0, .25, 1)", fill: "backwards" });
     const fr = flap.getBoundingClientRect(), ir = ic.getBoundingClientRect();
     const fromRight = (fr.right - ir.left) + 10, toLeft = (ir.right - fr.left) + 20, size = ir.width;
@@ -653,7 +653,7 @@
     // the word heads back to the middle of the card it is about to become
     const word = backLayer.querySelector(".flap-word");
     const menuW = lerp(m.flapW, m.flapW / 2, ease(lastC)), endX = (menuW - word.offsetWidth) / 2 - m.pad;
-    word.animate([{ transform: "translateX(0)" }, { transform: `translateX(${endX}px)` }],
+    if (V2) word.animate([{ transform: "translateX(0)" }, { transform: `translateX(${endX}px)` }],
                  { duration: 640, easing: "cubic-bezier(.65, 0, .35, 1)", fill: "forwards" });
     const fr = flap.getBoundingClientRect(), ir = ic.getBoundingClientRect(), size = ir.width;
     const toLeft = (ir.right - fr.left) + 20, turns = (toLeft / (Math.PI * size)) * 360;
@@ -681,6 +681,7 @@
     clone.querySelector(".cover-sketch").style.opacity = lit ? 0 : 1;
     clone.querySelector(".cover-marker").style.opacity = lit ? 1 : 0;
     z.appendChild(clone); Object.assign(z.style, box(r)); document.body.appendChild(z);
+    window.__smooth?.(z);
     return { z, clone, bg: z.style.background, panel };
   }
   function openWork(card) {
@@ -759,6 +760,52 @@
     }
   });
   addEventListener("keydown", e => { if (e.key === "Escape" && workOpen) goBack(); });
+
+  // ---------- 6. Continuous corners ----------
+  // Smoothed rounded rectangles (the corner curve eases into the straight edge, like iOS), drawn
+  // as a clip path for each card at its current size. Corner maths after Figma's corner
+  // smoothing (radius r, smoothing s): the curve begins (1 + s)·r from the corner.
+  const SQ_R = 16, SQ_S = 0.6;
+  function squirclePath(w, h, r = SQ_R, s = SQ_S) {
+    const maxP = Math.min(w, h) / 2;
+    r = Math.min(r, maxP);
+    let p = (1 + s) * r;
+    if (p > maxP) { s = Math.max(0, maxP / r - 1); p = maxP; }
+    const rad = d => d * Math.PI / 180;
+    const alpha = 45 * s, beta = 90 * (1 - s);
+    const arc = Math.sin(rad(beta / 2)) * r * Math.SQRT2;
+    const c = r * Math.tan(rad((90 - beta) / 4)) * Math.cos(rad(alpha));
+    const d = c * Math.tan(rad(alpha));
+    const b = (p - arc - c - d) / 3, a = 2 * b;
+    const f = n => +n.toFixed(2);
+    return `M${f(w - p)} 0` +
+      `c${f(a)} 0 ${f(a + b)} 0 ${f(a + b + c)} ${f(d)}a${f(r)} ${f(r)} 0 0 1 ${f(arc)} ${f(arc)}c${f(d)} ${f(c)} ${f(d)} ${f(b + c)} ${f(d)} ${f(a + b + c)}` +
+      `L${f(w)} ${f(h - p)}` +
+      `c0 ${f(a)} 0 ${f(a + b)} ${f(-d)} ${f(a + b + c)}a${f(r)} ${f(r)} 0 0 1 ${f(-arc)} ${f(arc)}c${f(-c)} ${f(d)} ${f(-(b + c))} ${f(d)} ${f(-(a + b + c))} ${f(d)}` +
+      `L${f(p)} ${f(h)}` +
+      `c${f(-a)} 0 ${f(-(a + b))} 0 ${f(-(a + b + c))} ${f(-d)}a${f(r)} ${f(r)} 0 0 1 ${f(-arc)} ${f(-arc)}c${f(-d)} ${f(-c)} ${f(-d)} ${f(-(b + c))} ${f(-d)} ${f(-(a + b + c))}` +
+      `L0 ${f(p)}` +
+      `c0 ${f(-a)} 0 ${f(-(a + b))} ${f(d)} ${f(-(a + b + c))}a${f(r)} ${f(r)} 0 0 1 ${f(arc)} ${f(-arc)}c${f(c)} ${f(-d)} ${f(b + c)} ${f(-d)} ${f(a + b + c)} ${f(-d)}Z`;
+  }
+  const sqRO = new ResizeObserver(entries => {
+    for (const e of entries) {
+      const el = e.target, w = el.offsetWidth, h = el.offsetHeight;
+      if (!w || !h) continue;
+      el.style.clipPath = `path("${squirclePath(w, h)}")`;
+    }
+  });
+  const smooth = el => { sqRO.observe(el); };
+  root.classList.add("sq");
+  [hero, flap, sheet, ...cards].forEach(smooth);
+  window.__smooth = smooth;                                         // the zoom layers join as they are made
+  // the top corners of the window the page scrolls under: the same curve, cut out of the bar
+  {
+    const P = (1 + SQ_S) * SQ_R, big = P * 4;
+    const d = squirclePath(big, big);
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${P}" height="${P}" viewBox="0 0 ${P} ${P}"><path fill-rule="evenodd" fill="#000" d="M0 0H${P}V${P}H0Z${d}"/></svg>`;
+    bar.style.setProperty("--sq-corner", `url("data:image/svg+xml,${encodeURIComponent(svg)}")`);
+    bar.style.setProperty("--sq-p", P + "px");
+  }
 
   // ---------- start ----------
   const start = () => { measure(); active = -1; pos = []; layoutGrid(false); };
