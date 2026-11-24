@@ -178,24 +178,29 @@
     lastC = c;
     bar.style.setProperty("--hero-h", lerp(m.h0, m.hMin, c) + "px");
     const fw = lerp(m.flapW, m.flapW / 2, ease(c));
-    const E = V3 ? (workDir > 0 ? outBack(workE) : 1 - outBack(1 - workE)) : ease(workE);
+    const E = ease(workE);
     if (E <= 0 && workE <= 0) {
       bar.style.setProperty("--flap-w", fw + "px");
       bar.style.removeProperty("--bar-gap");
       flap.style.width = flap.style.justifySelf = flap.style.opacity = flap.style.marginLeft = "";
       hero.style.width = hero.style.justifySelf = hero.style.opacity = hero.style.transform = "";
     } else if (V3) {
-      // V3: the toggle card's left edge sweeps to the left border (overshooting a touch and
-      // settling) and shoves the title card out to the left; its right edge stays on the right
-      // border. On the work page it is the full width; collapsed, half of it.
-      const full = bar.clientWidth, gp = Math.max(0, m.gap * (1 - clamp(E)));
-      const w = lerp(fw, lerp(full, full * 0.5, ease(c)), E), track = Math.min(w, full);
+      // V3, in two beats: (1) the toggle card's left edge sweeps to the left border, its right
+      // edge held on the right border, shoving the title card out to the left; (2) the right edge
+      // lets go and springs left (a quick overshoot and settle) until the card is the left half of
+      // the bar. Collapsed by scrolling, it is the left quarter.
+      const full = bar.clientWidth, L0 = full - fw, split = .45;
+      const ta = clamp(workE / split), tb = clamp((workE - split) / (1 - split));
+      const Rt = full * lerp(.5, .25, ease(c));
+      const L = lerp(L0, 0, ease(ta));
+      const R = tb <= 0 ? full : lerp(full, Rt, workDir > 0 ? outBack(tb, 1.6) : ease(tb));
+      const gp = Math.min(m.gap, L), track = full - L;
       bar.style.setProperty("--flap-w", track + "px");
       bar.style.setProperty("--bar-gap", gp + "px");
-      flap.style.width = w + "px"; flap.style.marginLeft = (track - w) + "px"; flap.style.justifySelf = "start";
-      const heroNat = full - fw - m.gap, heroTrack = Math.max(0, full - track - gp);
+      flap.style.width = (R - L) + "px"; flap.style.marginLeft = ""; flap.style.justifySelf = "start";
+      const heroNat = full - fw - m.gap, heroTrack = Math.max(0, L - gp);
       hero.style.width = heroNat + "px"; hero.style.justifySelf = "start";
-      hero.style.transform = `translateX(${heroTrack - heroNat}px)`; hero.style.opacity = 1 - clamp(E * 1.4);
+      hero.style.transform = `translateX(${heroTrack - heroNat}px)`; hero.style.opacity = clamp(heroTrack / heroNat * 1.6);
     } else if (!V2) {
       // V1: the title card grows and pushes the toggle card off to the right
       bar.style.setProperty("--flap-w", fw * (1 - E) + "px");
@@ -578,7 +583,7 @@
   function tweenWork(to, dur) {
     const from = workE, t0 = performance.now(), id = ++workAnim;
     workDir = to > from ? 1 : -1;
-    if (V3) dur *= 1.25;                                             // room for the settle
+    if (V3) dur *= 1.45;                                             // two beats: sweep, then spring back
     body.classList.add("has-work");
     return new Promise(res => {
       const step = now => {
