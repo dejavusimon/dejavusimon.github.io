@@ -415,3 +415,6 @@ html[data-variant="v2"] .hero-name { justify-self: end; grid-column: 1 / -1; tra
 
 /* V3: nothing clipped; the title card fades as it leaves, the toggle card's sweep may overshoot */
 html[data-variant="v3"] body.has-work .topbar-inner { overflow: visible; }
+.flap-back .flap-label { transition: max-width .35s var(--ease-in-out), opacity .25s ease; }
+.flap.is-narrow .flap-back .flap-label { max-width: 0; opacity: 0; }
+.flap.is-narrow .flap-back .flap-word { gap: 0; }

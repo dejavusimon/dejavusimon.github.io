@@ -187,17 +187,23 @@
     } else if (V3) {
       // V3, in two beats: (1) the toggle card's left edge sweeps to the left border, its right
       // edge held on the right border, shoving the title card out to the left; (2) the right edge
-      // lets go and springs left (a quick overshoot and settle) until the card is the left half of
-      // the bar. Collapsed by scrolling, it is the left quarter.
+      // lets go and springs left (a quick overshoot and settle) until the card is the left quarter of
+      // the bar. Collapsed by scrolling, it is the left eighth.
       const full = bar.clientWidth, L0 = full - fw, split = .45;
       const ta = clamp(workE / split), tb = clamp((workE - split) / (1 - split));
-      const Rt = full * lerp(.5, .25, ease(c));
+      const Rt = full * lerp(.25, .125, ease(c));
       const L = lerp(L0, 0, ease(ta));
       const R = tb <= 0 ? full : lerp(full, Rt, workDir > 0 ? outBack(tb, 1.6) : ease(tb));
       const gp = Math.min(m.gap, L), track = full - L;
       bar.style.setProperty("--flap-w", track + "px");
       bar.style.setProperty("--bar-gap", gp + "px");
       flap.style.width = (R - L) + "px"; flap.style.marginLeft = ""; flap.style.justifySelf = "start";
+      // too narrow for "‹ Physical": only the "‹" stays (the word folds away, as in the collapsed bar)
+      if (backLayer) {
+        const wd = backLayer.querySelector(".flap-word"), fs = parseFloat(getComputedStyle(wd).fontSize);
+        const need = wd.querySelector(".ic").offsetWidth + wd.querySelector(".flap-label").scrollWidth + fs * .3 + m.pad * 2;
+        flap.classList.toggle("is-narrow", R - L < need);
+      }
       const heroNat = full - fw - m.gap, heroTrack = Math.max(0, L - gp);
       hero.style.width = heroNat + "px"; hero.style.justifySelf = "start";
       hero.style.transform = `translateX(${heroTrack - heroNat}px)`; hero.style.opacity = clamp(heroTrack / heroNat * 1.6);
