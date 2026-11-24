@@ -375,3 +375,33 @@ body.is-revealing .rv-in { opacity: 1; transform: none;
 .frame-pin:hover svg { transform: scale(1.08); }
 .frame-pin svg { transition: transform .2s ease; }
 @media (max-width: 720px) { .frame-pin { width: 40px; height: 40px; right: 4px; bottom: 4px; } .frame-pin svg { width: 27px; height: 27px; } }
+
+/* ===== Work page (prototype) ===================================================== */
+.hero-toggle svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible;
+                   transform: scale(var(--tog-s, 1)); transform-origin: 0% 50%; }
+.hero-toggle polyline { fill: none; stroke: currentColor; stroke-width: 7; stroke-linejoin: miter; stroke-linecap: butt; }
+.hero-toggle span { display: none; }
+.topbar-inner { gap: var(--bar-gap, var(--card-gap)); }
+.topbar-inner > * { min-width: 0; }
+body.has-work .topbar-inner { overflow: clip; }
+/* on a work page the back arrow stays, even in the collapsed bar, where it takes the logo's place */
+body.is-work .hero-toggle { opacity: 1; pointer-events: auto; }
+body.is-work .hero-social, body.is-work .hero-intro { display: none; }
+
+.work-page { padding-bottom: var(--space-6, 48px); }
+.work-sheet { position: relative; min-height: 170vh; border-radius: var(--radius-card); background: var(--sheet-bg, var(--surface)); }
+.work-sheet-title { position: absolute; left: var(--card-pad); top: var(--card-pad); font-size: var(--size-small); font-weight: 500;
+                    color: var(--sheet-ink, var(--ink)); opacity: .55; }
+.work-zoom { position: fixed; z-index: 60; overflow: hidden; border-radius: var(--radius-card); pointer-events: none; }
+.work-zoom .work-cover { opacity: 1; }
+
+/* ===== V2: toggle card on the left, title card on the right ======================= */
+html[data-variant="v2"] .topbar-inner { grid-template-columns: var(--flap-w, calc((100% - 2 * var(--card-gap)) / 3)) 1fr; }
+html[data-variant="v2"] .flap { order: -1; }
+/* back face of the toggle card on a work page: "‹ Objects" */
+.flap-back { position: absolute; inset: 0; z-index: 3; border-radius: var(--radius-card); background: var(--ink); overflow: hidden;
+             display: grid; place-items: center; color: var(--surface); visibility: hidden; transition: background-color var(--dur-slow) var(--ease-in-out); }
+.flap.is-back .flap-back { visibility: visible; }
+.flap-back .ic { position: relative; display: inline-block; width: calc(.8em + 10px * var(--c, 0)); height: calc(.8em + 10px * var(--c, 0)); flex: none; }
+.flap-back .ic svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.is-frames .flap-back { color: #fff; }

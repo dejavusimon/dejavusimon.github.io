@@ -7,6 +7,8 @@
 (() => {
   const root = document.documentElement, body = document.body;
   const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const V2 = root.dataset.variant === "v2";                        // prototype: toggle card on the left
+  let workE = 0, lastC = 0;                                         // work-page morph 0 → 1; last collapse amount
   const ease = t => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
   const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
   const lerp = (a, b, t) => a + (b - a) * t;
@@ -23,9 +25,8 @@
   const intro = document.querySelector(".hero-intro");
   let m = {};   // measurements
   function flapWidth() {
-    const g = document.querySelector(".work-grid");
     const gap = parseFloat(getComputedStyle(root).getPropertyValue("--card-gap")) || 12;
-    const W = g.clientWidth;
+    const W = gridW();
     return W >= 720 ? (W - gap * 2) / 3 : (W - gap) * 0.4;   // = one work card on desktop
   }
   function cardHeight() {
@@ -37,17 +38,20 @@
   // ---- intro behind a plus: closed / open heights, and where the plus/cross sits ----
   const toggle = hero.querySelector(".hero-toggle");
   let open = false, openE = 0;                                     // openE: 0 closed → 1 open (animated)
-  const phone = () => document.querySelector(".work-grid").clientWidth < 720;
+  // the grid's width, also while it is hidden behind a project page (same box: the board's content)
+  const gridW = () => { const g = document.querySelector(".work-grid"); if (!g.hidden) return g.clientWidth;
+    const b = document.querySelector(".board"), cs = getComputedStyle(b); return b.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight); };
+  const phone = () => gridW() < 720;
   function measure() {
     // the top row is exactly as wide as the grid below, so the flap's edge always lines up
     bar.style.maxWidth = "none";
-    bar.style.width = document.querySelector(".work-grid").clientWidth + "px";
+    bar.style.width = gridW() + "px";
     // on narrow screens the name shrinks until the whole word fits inside the title card
     name.style.fontSize = "";
     {
       const gap = parseFloat(getComputedStyle(root).getPropertyValue("--card-gap")) || 12;
       const padX = parseFloat(getComputedStyle(hero).paddingLeft);
-      const avail = document.querySelector(".work-grid").clientWidth - flapWidth() - gap - padX * 2
+      const avail = gridW() - flapWidth() - gap - padX * 2
                     - (phone() ? 34 : 0);                         // phones: room for the cross beside the name
       const ctx = document.createElement("canvas").getContext("2d"), cs = getComputedStyle(name);
       ctx.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
@@ -78,7 +82,7 @@
     };
     m.hMin = Math.round(pad * 2 + cap * m.sMin);
     // intro: under the name, as wide as one work card (desktop) or the whole card (phones)
-    const gW = document.querySelector(".work-grid").clientWidth;
+    const gW = gridW();
     const gap = parseFloat(getComputedStyle(root).getPropertyValue("--card-gap")) || 12;
     const heroW = gW - m.flapW - gap, inner = heroW - pad * 2;
     const ph = phone();
@@ -95,7 +99,8 @@
       m.hOpen = Math.round(Math.max(m.hBase, introTop + introH + pad + 4));
     }
     m.h0 = lerp(m.hBase, m.hOpen, ease(openE));
-    m.inner = inner; m.ph = ph;
+    m.inner = inner; m.ph = ph; m.gap = gap;
+    m.togS = clamp((cap * m.sMin) / 22, 0.45, 1);                  // back arrow ≈ logo height when collapsed
     placeToggle();
     // the mark: same height as the capitals, its left edge on the D's left edge
     mark.style.height = cap + "px";
@@ -134,7 +139,7 @@
     };
     requestAnimationFrame(step);
   }
-  toggle.addEventListener("click", () => setOpen(!open));
+  toggle.addEventListener("click", () => { if (workOpen) { if (!V2) goBack(); } else setOpen(!open); });
   // desktop: the email icon copies the address and says so; phones keep the mail app link
   const mail = hero.querySelector('.hero-social a[href^="mailto:"]');
   let toastEl, toastTimer;
@@ -165,15 +170,37 @@
   // ride up with it. When scrolling stops partway, the page itself glides on: past 50% to the
   // slim logo bar, under 50% back to the full card. Nothing rests half-collapsed.
   function apply(c) {
+    lastC = c;
     bar.style.setProperty("--hero-h", lerp(m.h0, m.hMin, c) + "px");
-    bar.style.setProperty("--flap-w", lerp(m.flapW, m.flapW / 2, ease(c)) + "px");
+    const fw = lerp(m.flapW, m.flapW / 2, ease(c)), E = ease(workE);
+    if (E <= 0) {
+      bar.style.setProperty("--flap-w", fw + "px");
+      bar.style.removeProperty("--bar-gap");
+      flap.style.width = flap.style.justifySelf = flap.style.opacity = "";
+      hero.style.width = hero.style.justifySelf = hero.style.opacity = "";
+    } else if (!V2) {
+      // V1: the title card grows and pushes the toggle card off to the right
+      bar.style.setProperty("--flap-w", fw * (1 - E) + "px");
+      bar.style.setProperty("--bar-gap", m.gap * (1 - E) + "px");
+      flap.style.width = fw + "px"; flap.style.justifySelf = "start"; flap.style.opacity = 1 - clamp(E * 1.25);
+    } else {
+      // V2: the toggle card grows and pushes the title card off to the right
+      const full = bar.clientWidth;
+      bar.style.setProperty("--flap-w", lerp(fw, full, E) + "px");
+      bar.style.setProperty("--bar-gap", m.gap * (1 - E) + "px");
+      hero.style.width = (full - fw - m.gap) + "px"; hero.style.justifySelf = "start"; hero.style.opacity = 1 - clamp(E * 1.25);
+    }
+    // V1 work page: the name fades as the bar shrinks and the back arrow takes the logo's place
+    const fade = V2 ? 0 : E * clamp(c * 2.5);
+    block.style.opacity = 1 - fade;
+    hero.style.setProperty("--tog-s", lerp(1, m.togS || 0.7, V2 ? 0 : E * ease(c)));
     bar.style.setProperty("--c", c.toFixed(3));
     const a = ease(clamp(c / 0.75));                 // shorten + shrink
     const b = ease(clamp((c - 0.7) / 0.3));          // D → mark
     clip.style.width = lerp(m.fullW, m.dW, a) + "px";
     block.style.transform = `scale(${lerp(1, m.sMin, a)})`;
     name.style.opacity = 1 - b;
-    mark.style.opacity = b;
+    mark.style.opacity = b * (1 - (V2 ? 0 : E));
     body.classList.toggle("is-collapsed", c > 0.3);
   }
   let snapTimer;
@@ -344,7 +371,7 @@
   let pointer = null, closeTimer;
   const canHover = matchMedia("(hover: hover) and (pointer: fine)");
   function track() {
-    if (!pointer || framesMode() || !canHover.matches || body.classList.contains("is-revealing") || body.classList.contains("intro-active")) return;
+    if (!pointer || workOpen || framesMode() || !canHover.matches || body.classList.contains("is-revealing") || body.classList.contains("intro-active")) return;
     const overBar = document.elementFromPoint(pointer.clientX, pointer.clientY)?.closest(".topbar");
     let i = overBar ? null : cardAt(pointer);
     if (i !== null && !hasWork(cards[i])) i = null;                  // empty cards never open
@@ -518,8 +545,178 @@
     const ra = a.getBoundingClientRect(), rb = b.getBoundingClientRect();
     return Math.round(ra.top - rb.top) || ra.left - rb.left;
   });
-  flap.addEventListener("click", flip);
+  flap.addEventListener("click", () => { if (workOpen) { if (V2) goBack(); } else flip(); });
   flap.removeAttribute("aria-pressed");
+
+  // ---------- 5. Work page (prototype) ----------
+  // Click a work: it dips to 95% and springs back, then the view zooms into it: the card grows
+  // to fill the page width while the others drift out, and the (for now empty) project page is
+  // revealed underneath. V1 turns the title card's plus into a back arrow and pushes the toggle
+  // card away; V2 grows the toggle card, pushes the title card away and swaps its icon for "‹".
+  let workOpen = false, workBusy = false, workCard = null, savedY = 0, workAnim = 0;
+  const page = document.querySelector(".work-page"), sheet = page.querySelector(".work-sheet");
+  const sheetTitle = sheet.querySelector(".work-sheet-title");
+  const EASE_Z = "cubic-bezier(.7, 0, .2, 1)";
+  function tweenWork(to, dur) {
+    const from = workE, t0 = performance.now(), id = ++workAnim;
+    body.classList.add("has-work");
+    return new Promise(res => {
+      const step = now => {
+        if (id !== workAnim) return res();
+        const t = clamp((now - t0) / dur); workE = from + (to - from) * t; apply(lastC);
+        if (t < 1) requestAnimationFrame(step);
+        else { if (to === 0) body.classList.remove("has-work"); res(); }
+      };
+      requestAnimationFrame(step);
+    });
+  }
+  // V1: the plus's two strokes become a back arrow without moving: the vertical stroke bends
+  // into a 90° arrowhead, the horizontal one slides right and grows a little into the shaft
+  const tv = toggle.querySelector(".tog-v"), th = toggle.querySelector(".tog-h");
+  const PLUS = { v: [[18, 3], [18, 18], [18, 33]], h: [[3, 18], [18, 18], [33, 18]] };
+  const ARROW = { v: [[18.5, 7.5], [8, 18], [18.5, 28.5]], h: [[8, 18], [23, 18], [38, 18]] };
+  let morphId = 0;
+  function morphToggle(toArrow, dur = 560) {
+    const A = toArrow ? PLUS : ARROW, B = toArrow ? ARROW : PLUS, t0 = performance.now(), id = ++morphId;
+    const pts = (k, t) => A[k].map((p, i) => [lerp(p[0], B[k][i][0], t), lerp(p[1], B[k][i][1], t)].map(n => n.toFixed(2)).join(",")).join(" ");
+    const step = now => {
+      if (id !== morphId) return;
+      const t = ease(clamp((now - t0) / dur));
+      tv.setAttribute("points", pts("v", t)); th.setAttribute("points", pts("h", t));
+      if (t < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+    toggle.setAttribute("aria-label", toArrow ? "Back to all work" : "About Simon");
+  }
+  // V2: "‹" slides in from the right of the toggle card and knocks the mode icon rolling away
+  const CHEV = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15.5 4.5 8 12l7.5 7.5"/></svg>';
+  let backLayer = null;
+  function flapToBack() {
+    const mo = MODES[mode];
+    flap.insertAdjacentHTML("beforeend", `<span class="flap-back"><span class="flap-word"><span class="ic"><span class="ic-old">${mo.icon}</span><span class="ic-new">${CHEV}</span></span><span class="flap-label">${mo.word}</span></span></span>`);
+    backLayer = flap.lastElementChild; flap.classList.add("is-back");
+    flap.setAttribute("aria-label", "Back to all work");
+    const ic = backLayer.querySelector(".ic"), oldI = backLayer.querySelector(".ic-old"), newI = backLayer.querySelector(".ic-new");
+    if (reduce) { oldI.style.opacity = 0; return; }
+    const fr = flap.getBoundingClientRect(), ir = ic.getBoundingClientRect();
+    const fromRight = (fr.right - ir.left) + 10, toLeft = (ir.right - fr.left) + 20, size = ir.width;
+    newI.animate([{ transform: `translateX(${fromRight}px)` }, { transform: "translateX(0)" }],
+                 { duration: 620, delay: 260, easing: "cubic-bezier(.3, .9, .35, 1.12)", fill: "backwards" });
+    // contact a little before the arrow lands: the cube rolls off to the left
+    const turns = -(toLeft / (Math.PI * size)) * 360;               // rolls like a wheel of its own size
+    oldI.animate([{ transform: "translateX(0) rotate(0deg)", opacity: 1 },
+                  { transform: `translateX(${-toLeft}px) rotate(${turns}deg)`, opacity: 1, offset: .85 },
+                  { transform: `translateX(${-toLeft - size}px) rotate(${turns * 1.15}deg)`, opacity: 0 }],
+                 { duration: 760, delay: 560, easing: "cubic-bezier(.2, .55, .3, 1)", fill: "both" });
+  }
+  function flapToMenu() {
+    if (!backLayer) return Promise.resolve();
+    const oldI = backLayer.querySelector(".ic-old"), newI = backLayer.querySelector(".ic-new"), ic = backLayer.querySelector(".ic");
+    oldI.getAnimations().forEach(a => a.cancel());
+    const fr = flap.getBoundingClientRect(), ir = ic.getBoundingClientRect(), size = ir.width;
+    const toLeft = (ir.right - fr.left) + 20, turns = (toLeft / (Math.PI * size)) * 360;
+    const a1 = newI.animate([{ transform: "translateX(0)" }, { transform: `translateX(${fr.right - ir.left + 10}px)` }],
+                            { duration: 420, easing: "cubic-bezier(.6, 0, .9, .4)", fill: "forwards" });
+    const a2 = oldI.animate([{ transform: `translateX(${-toLeft - size}px) rotate(${-turns}deg)`, opacity: 0 },
+                             { transform: `translateX(${-toLeft}px) rotate(${-turns * .85}deg)`, opacity: 1, offset: .15 },
+                             { transform: "translateX(0) rotate(0deg)", opacity: 1 }],
+                            { duration: 700, delay: 120, easing: "cubic-bezier(.2, .6, .3, 1)", fill: "both" });
+    return Promise.all([a1.finished, a2.finished]).then(() => {
+      backLayer.remove(); backLayer = null; flap.classList.remove("is-back");
+      flap.setAttribute("aria-label", `Showing ${MODES[mode].word.toLowerCase()}. Flip to show ${MODES[(mode + 1) % 3].word.toLowerCase()}`);
+    });
+  }
+  const rectOf = el => { const r = el.getBoundingClientRect(); return { left: r.left, top: r.top, width: r.width, height: r.height }; };
+  const box = r => ({ left: r.left + "px", top: r.top + "px", width: r.width + "px", height: r.height + "px" });
+  function zoomLayer(card, r) {
+    const f = card.querySelector(".face--front"), panel = f.querySelector(`.panel--${f.dataset.show}`);
+    const fig = panel.querySelector(".work-cover"), cs = getComputedStyle(fig);
+    const z = document.createElement("div"); z.className = "work-zoom";
+    z.style.background = getComputedStyle(panel).backgroundColor;
+    const clone = fig.cloneNode(true);
+    clone.style.background = cs.backgroundColor; clone.style.mixBlendMode = cs.mixBlendMode;
+    clone.style.inset = getComputedStyle(fig).inset || "";
+    const lit = card.classList.contains("is-open") || card.classList.contains("is-lit");
+    clone.querySelector(".cover-sketch").style.opacity = lit ? 0 : 1;
+    clone.querySelector(".cover-marker").style.opacity = lit ? 1 : 0;
+    z.appendChild(clone); Object.assign(z.style, box(r)); document.body.appendChild(z);
+    return { z, clone, bg: z.style.background, panel };
+  }
+  function openWork(card) {
+    if (workOpen || workBusy) return;
+    workBusy = true; workOpen = true; workCard = card; savedY = scrollY;
+    if (open) setOpen(false);
+    clearTimeout(closeTimer); pending = null;
+    const inner = card.querySelector(".work-card-inner");
+    const press = reduce ? null : inner.animate(
+      [{ transform: "scale(1)" }, { transform: "scale(.95)", offset: .4 }, { transform: "scale(1)" }],
+      { duration: 420, easing: "cubic-bezier(.3, .7, .4, 1)" });
+    (press ? press.finished : Promise.resolve()).then(() => {
+      const r0 = rectOf(card);
+      const { z, clone, bg, panel } = zoomLayer(card, r0);
+      const ink = getComputedStyle(panel).color;
+      card.style.visibility = "hidden";
+      // where the project page sits once the page is back at the top
+      const g = grid.getBoundingClientRect(), topAt0 = g.top + scrollY;
+      const r1 = { left: g.left, top: topAt0, width: g.width, height: Math.max(innerHeight - topAt0 + 40, 200) };
+      if (scrollY > 0) scrollTo({ top: 0, behavior: reduce ? "auto" : "smooth" });
+      const D = reduce ? 1 : 720;
+      cards.forEach(el => { if (el !== card) el.animate(
+        [{ opacity: 1 }, { opacity: 0 }], { duration: D * .6, easing: "ease-in", fill: "forwards" }); });
+      grid.animate([{ transform: "scale(1)" }, { transform: "scale(1.04)" }], { duration: D, easing: EASE_Z, fill: "forwards" });
+      z.animate([{ ...box(r0), borderRadius: getComputedStyle(card).borderRadius }, { ...box(r1) }], { duration: D, easing: EASE_Z, fill: "forwards" });
+      clone.animate([{ transform: "scale(1)", opacity: 1 }, { transform: "scale(1.35)", opacity: 0 }], { duration: D, easing: "cubic-bezier(.5, 0, .9, .5)", fill: "forwards" });
+      tweenWork(1, D);
+      if (V2) flapToBack(); else morphToggle(true);
+      body.classList.add("is-work");
+      setTimeout(() => {
+        sheet.style.setProperty("--sheet-bg", bg); sheet.style.setProperty("--sheet-ink", ink);
+        const alt = card.querySelector(`.face--front .panel--${targetPanel} .cover-sketch`)?.alt || "";
+        sheetTitle.textContent = alt.split(",")[0] + " — project page";
+        grid.hidden = true; page.hidden = false;
+        grid.getAnimations().forEach(a => a.cancel());
+        cards.forEach(el => el.getAnimations().forEach(a => { if (a.effect && a.effect.getKeyframes().some(k => "opacity" in k)) a.cancel(); }));
+        card.style.visibility = "";
+        requestAnimationFrame(() => { z.remove(); workBusy = false; });
+      }, D + 20);
+    });
+  }
+  function goBack() {
+    if (!workOpen || workBusy) return;
+    workBusy = true;
+    const card = workCard, sr = sheet.getBoundingClientRect();
+    const r1 = { left: sr.left, top: sr.top, width: sr.width, height: Math.min(sr.height, innerHeight - sr.top + 40) };
+    // back to the grid, where it was
+    page.hidden = true; grid.hidden = false; body.classList.remove("is-work");
+    active = -1; layoutGrid(false);
+    scrollTo({ top: savedY, behavior: "instant" });
+    collapse();
+    const r0 = rectOf(card);
+    const { z, clone } = zoomLayer(card, r1);
+    card.style.visibility = "hidden";
+    const D = reduce ? 1 : 640;
+    cards.forEach(el => { if (el !== card) el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: D * .8, delay: D * .2, easing: "ease-out", fill: "backwards" }); });
+    grid.animate([{ transform: "scale(1.04)" }, { transform: "scale(1)" }], { duration: D, easing: EASE_Z });
+    z.animate([{ ...box(r1) }, { ...box(r0), borderRadius: getComputedStyle(card).borderRadius }], { duration: D, easing: EASE_Z, fill: "forwards" });
+    clone.animate([{ transform: "scale(1.35)", opacity: 0 }, { transform: "scale(1)", opacity: 1 }], { duration: D, easing: "cubic-bezier(.1, .5, .5, 1)", fill: "forwards" });
+    tweenWork(0, D);
+    if (V2) flapToMenu(); else morphToggle(false);
+    setTimeout(() => {
+      card.style.visibility = ""; z.remove();
+      workOpen = false; workBusy = false; workCard = null;
+    }, D + 20);
+  }
+  grid.addEventListener("click", e => {
+    if (workOpen || framesMode()) return;
+    const card = e.target.closest(".work-card");
+    if (card && hasWork(card)) openWork(card);
+  });
+  grid.addEventListener("keydown", e => {
+    if ((e.key === "Enter" || e.key === " ") && !workOpen && !framesMode()) {
+      const card = e.target.closest(".work-card"); if (card && hasWork(card)) { e.preventDefault(); openWork(card); }
+    }
+  });
+  addEventListener("keydown", e => { if (e.key === "Escape" && workOpen) goBack(); });
 
   // ---------- start ----------
   const start = () => { measure(); active = -1; pos = []; layoutGrid(false); };
@@ -527,6 +724,7 @@
   let lastW = 0;
   // re-measure on the next frame, not inside the observer (changing layout there loops)
   new ResizeObserver(() => requestAnimationFrame(() => {
+    if (grid.hidden) return;
     if (grid.clientWidth !== lastW) { lastW = grid.clientWidth; measure(); layoutGrid(false); }
   })).observe(grid);
   (document.fonts ? document.fonts.ready : Promise.resolve()).then(start);
